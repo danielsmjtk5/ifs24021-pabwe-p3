@@ -42,7 +42,7 @@ function escapeHTML(str) {
 }
 
 /* ==========================================================================
-   1. NAVIGASI TAB (DENGAN PERSISTENSI KOPDESFITE)
+   1. NAVIGASI TAB (BERBASIS URL QUERY PARAMETER & HISTORY API)
    ========================================================================== */
 function initTabSystem() {
   const tabs = [
@@ -51,9 +51,13 @@ function initTabSystem() {
     { key: "quiz", btn: document.getElementById("tab-btn-quiz"), content: document.getElementById("tab-content-quiz") }
   ];
 
-  function activateTab(tabKey) {
+  const validKeys = tabs.map(t => t.key);
+
+  function activateTab(tabKey, updateUrl = true) {
+    const activeKey = validKeys.includes(tabKey) ? tabKey : "expense";
+
     tabs.forEach(tab => {
-      if (tab.key === tabKey) {
+      if (tab.key === activeKey) {
         tab.btn.classList.add("bg-indigo-600", "text-white", "shadow-md");
         tab.btn.classList.remove("text-slate-400");
         tab.content.classList.remove("hidden");
@@ -63,15 +67,30 @@ function initTabSystem() {
         tab.content.classList.add("hidden");
       }
     });
-    localStorage.setItem("kopdesfite_active_tab", tabKey);
+
+    // Perbarui query parameter pada URL tanpa mereload halaman
+    if (updateUrl) {
+      const url = new URL(window.location);
+      url.searchParams.set("tab", activeKey);
+      window.history.replaceState({}, "", url);
+    }
   }
 
+  // Event listener tombol tab
   tabs.forEach(tab => {
-    tab.btn.addEventListener("click", () => activateTab(tab.key));
+    tab.btn.addEventListener("click", () => activateTab(tab.key, true));
   });
 
-  const savedTab = localStorage.getItem("kopdesfite_active_tab") || "expense";
-  activateTab(savedTab);
+  // Baca URL Query Parameter saat pertama kali dimuat
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabFromUrl = urlParams.get("tab");
+  activateTab(tabFromUrl, true);
+
+  // Tangani navigasi back/forward browser
+  window.addEventListener("popstate", () => {
+    const currentParams = new URLSearchParams(window.location.search);
+    activateTab(currentParams.get("tab"), false);
+  });
 }
 
 /* ==========================================================================
@@ -191,7 +210,13 @@ function initExpenseTracker() {
     const tanggal = inputTanggal.value;
 
     if (!judul || isNaN(jumlah) || jumlah <= 0 || !tanggal) {
-      alert("Harap isi seluruh field wajib dengan benar!");
+      ModalEngine.open("Peringatan Validasi", `
+        <p class="text-xs text-slate-300">Harap isi seluruh field wajib dengan nominal angka valid (lebih dari 0)!</p>
+        <div class="flex justify-end pt-2">
+          <button id="btn-close-val-modal" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-xs font-medium text-white">Mengerti</button>
+        </div>
+      `);
+      document.getElementById("btn-close-val-modal").onclick = () => ModalEngine.close();
       return;
     }
 
@@ -313,7 +338,7 @@ function initBookmarkManager() {
   let bookmarks = JSON.parse(localStorage.getItem("kopdesfite_bookmark")) || [];
 
   function validateURL(string) {
-    return /^https?:\/\/.+/i.test(string);
+    return /^https?:\/\/.+/i.test(string.trim());
   }
 
   function renderBookmark() {
@@ -382,12 +407,18 @@ function initBookmarkManager() {
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const nama = inputNama.value.trim();
-    let url = inputUrl.value.trim();
+    const url = inputUrl.value.trim();
     const kategori = inputKategori.value;
     const catatan = inputCatatan.value.trim();
 
     if (!validateURL(url)) {
-      alert("URL harus diawali dengan http:// atau https://");
+      ModalEngine.open("Peringatan Validasi URL", `
+        <p class="text-xs text-slate-300">URL harus diawali dengan format protokol valid (<strong>http://</strong> atau <strong>https://</strong>)!</p>
+        <div class="flex justify-end pt-2">
+          <button id="btn-close-val-modal" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-xs font-medium text-white">Mengerti</button>
+        </div>
+      `);
+      document.getElementById("btn-close-val-modal").onclick = () => ModalEngine.close();
       return;
     }
 
