@@ -11,8 +11,10 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ==========================================================================
-   0. MODAL UTILITY ENGINE (Universal Custom Modal)
+   0. HELPER & UTILITY ENGINE
    ========================================================================== */
+
+/* Universal Custom Modal Engine */
 const ModalEngine = {
   backdrop: document.getElementById("modal-backdrop"),
   title: document.getElementById("modal-title"),
@@ -28,12 +30,22 @@ const ModalEngine = {
   close() {
     this.backdrop.classList.add("hidden");
     this.body.innerHTML = "";
+  },
+
+  showValidationAlert(title, message) {
+    this.open(title, `
+      <p class="text-xs text-slate-300 leading-relaxed">${message}</p>
+      <div class="flex justify-end pt-2">
+        <button id="btn-modal-alert-ok" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Mengerti</button>
+      </div>
+    `);
+    document.getElementById("btn-modal-alert-ok").onclick = () => this.close();
   }
 };
 
 document.getElementById("btn-modal-close").addEventListener("click", () => ModalEngine.close());
 
-/* Helper Escaping String XSS */
+/* Escaping String XSS Helper */
 function escapeHTML(str) {
   if (typeof str !== "string") return str;
   return str.replace(/[&<>'"]/g, 
@@ -41,8 +53,66 @@ function escapeHTML(str) {
   );
 }
 
+/* Helper HTML Card Generation untuk Menghindari Duplikasi Template */
+function createExpenseCardHTML(item, isIncome, formattedAmount) {
+  return `
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center ${isIncome ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50' : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'}">
+        <i class="fa-solid ${isIncome ? 'fa-arrow-down' : 'fa-arrow-up'} text-xs"></i>
+      </div>
+      <div>
+        <h4 class="text-xs font-semibold text-slate-200">${escapeHTML(item.judul)}</h4>
+        <div class="flex items-center gap-2 mt-0.5">
+          <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">${escapeHTML(item.kategori)}</span>
+          <span class="text-[10px] text-slate-500">${item.tanggal}</span>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-xs font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}">
+        ${isIncome ? '+' : '-'} ${formattedAmount}
+      </span>
+      <div class="flex items-center gap-1">
+        <button data-id="${item.id}" class="btn-edit-expense p-1 text-slate-400 hover:text-indigo-400 text-xs transition-colors">
+          <i class="fa-solid fa-pen"></i>
+        </button>
+        <button data-id="${item.id}" class="btn-delete-expense p-1 text-slate-400 hover:text-rose-400 text-xs transition-colors">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function createBookmarkCardHTML(item) {
+  return `
+    <div>
+      <div class="flex justify-between items-start gap-2">
+        <span class="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/50">
+          ${escapeHTML(item.kategori)}
+        </span>
+        <div class="flex items-center gap-1">
+          <button data-id="${item.id}" class="btn-edit-bookmark text-slate-400 hover:text-indigo-400 text-xs p-1 transition-colors">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button data-id="${item.id}" class="btn-delete-bookmark text-slate-400 hover:text-rose-400 text-xs p-1 transition-colors">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      <h4 class="font-bold text-slate-200 mt-2 text-xs line-clamp-1">${escapeHTML(item.nama)}</h4>
+      <p class="text-[11px] text-slate-400 line-clamp-1 mt-0.5">${escapeHTML(item.url)}</p>
+      ${item.catatan ? `<p class="text-[10px] text-slate-500 italic mt-1 line-clamp-2">${escapeHTML(item.catatan)}</p>` : ''}
+    </div>
+    <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 text-xs font-medium text-indigo-400 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 py-1.5 rounded-lg transition-colors w-full">
+      <span>Kunjungi Tautan</span>
+      <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+    </a>
+  `;
+}
+
 /* ==========================================================================
-   1. NAVIGASI TAB (BERBASIS URL QUERY PARAMETER & HISTORY API)
+   1. NAVIGASI TAB (URL QUERY PARAMETER & HISTORY API)
    ========================================================================== */
 function initTabSystem() {
   const tabs = [
@@ -68,7 +138,6 @@ function initTabSystem() {
       }
     });
 
-    // Perbarui query parameter pada URL tanpa mereload halaman
     if (updateUrl) {
       const url = new URL(window.location);
       url.searchParams.set("tab", activeKey);
@@ -76,17 +145,13 @@ function initTabSystem() {
     }
   }
 
-  // Event listener tombol tab
   tabs.forEach(tab => {
     tab.btn.addEventListener("click", () => activateTab(tab.key, true));
   });
 
-  // Baca URL Query Parameter saat pertama kali dimuat
   const urlParams = new URLSearchParams(window.location.search);
-  const tabFromUrl = urlParams.get("tab");
-  activateTab(tabFromUrl, true);
+  activateTab(urlParams.get("tab"), true);
 
-  // Tangani navigasi back/forward browser
   window.addEventListener("popstate", () => {
     const currentParams = new URLSearchParams(window.location.search);
     activateTab(currentParams.get("tab"), false);
@@ -117,11 +182,16 @@ function initExpenseTracker() {
 
   let transactions = JSON.parse(localStorage.getItem("kopdesfite_expense")) || [];
 
+  function saveExpenseData() {
+    localStorage.setItem("kopdesfite_expense", JSON.stringify(transactions));
+  }
+
   function formatIDR(amount) {
     return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
   }
 
-  function renderExpense() {
+  function renderExpenseUI() {
+    // 1. Ringkasan Saldo
     let totalIn = 0;
     let totalOut = 0;
     transactions.forEach(t => {
@@ -133,8 +203,8 @@ function initExpenseTracker() {
     elPengeluaran.textContent = formatIDR(totalOut);
     elSaldo.textContent = formatIDR(totalIn - totalOut);
 
+    // 2. Filter & Sort
     let processed = [...transactions];
-
     const query = inputSearch.value.trim().toLowerCase();
     if (query) {
       processed = processed.filter(t => t.judul.toLowerCase().includes(query));
@@ -153,6 +223,7 @@ function initExpenseTracker() {
       if (sortVal === "terkecil") return a.jumlah - b.jumlah;
     });
 
+    // 3. Render List DOM
     containerList.innerHTML = "";
 
     if (processed.length === 0) {
@@ -168,39 +239,12 @@ function initExpenseTracker() {
       const isIncome = item.tipe === "Pemasukan";
       const card = document.createElement("div");
       card.className = "flex items-center justify-between p-3.5 bg-slate-900/70 rounded-xl border border-slate-700/60 hover:border-slate-600 transition-all";
-      card.innerHTML = `
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center ${isIncome ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50' : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'}">
-            <i class="fa-solid ${isIncome ? 'fa-arrow-down' : 'fa-arrow-up'} text-xs"></i>
-          </div>
-          <div>
-            <h4 class="text-xs font-semibold text-slate-200">${escapeHTML(item.judul)}</h4>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">${escapeHTML(item.kategori)}</span>
-              <span class="text-[10px] text-slate-500">${item.tanggal}</span>
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="text-xs font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}">
-            ${isIncome ? '+' : '-'} ${formatIDR(item.jumlah)}
-          </span>
-          <div class="flex items-center gap-1">
-            <button data-id="${item.id}" class="btn-edit-expense p-1 text-slate-400 hover:text-indigo-400 text-xs">
-              <i class="fa-solid fa-pen"></i>
-            </button>
-            <button data-id="${item.id}" class="btn-delete-expense p-1 text-slate-400 hover:text-rose-400 text-xs">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-        </div>
-      `;
+      card.innerHTML = createExpenseCardHTML(item, isIncome, formatIDR(item.jumlah));
       containerList.appendChild(card);
     });
-
-    localStorage.setItem("kopdesfite_expense", JSON.stringify(transactions));
   }
 
+  // Event Handlers
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const judul = inputJudul.value.trim();
@@ -210,23 +254,17 @@ function initExpenseTracker() {
     const tanggal = inputTanggal.value;
 
     if (!judul || isNaN(jumlah) || jumlah <= 0 || !tanggal) {
-      ModalEngine.open("Peringatan Validasi", `
-        <p class="text-xs text-slate-300">Harap isi seluruh field wajib dengan nominal angka valid (lebih dari 0)!</p>
-        <div class="flex justify-end pt-2">
-          <button id="btn-close-val-modal" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-xs font-medium text-white">Mengerti</button>
-        </div>
-      `);
-      document.getElementById("btn-close-val-modal").onclick = () => ModalEngine.close();
+      ModalEngine.showValidationAlert("Peringatan Validasi", "Harap isi seluruh field wajib dengan nominal angka valid (lebih dari 0)!");
       return;
     }
 
-    const newTransaction = {
+    transactions.push({
       id: Date.now().toString(),
       judul, kategori, jumlah, tipe, tanggal
-    };
+    });
 
-    transactions.push(newTransaction);
-    renderExpense();
+    saveExpenseData();
+    renderExpenseUI();
     form.reset();
     inputTanggal.valueAsDate = new Date();
   });
@@ -241,17 +279,18 @@ function initExpenseTracker() {
       if (!target) return;
 
       ModalEngine.open("Hapus Transaksi", `
-        <p class="text-xs text-slate-300">Apakah Anda yakin ingin menghapus catatan "<strong>${escapeHTML(target.judul)}</strong>"?</p>
+        <p class="text-xs text-slate-300 leading-relaxed">Apakah Anda yakin ingin menghapus catatan "<strong>${escapeHTML(target.judul)}</strong>"?</p>
         <div class="flex justify-end gap-2 pt-2">
-          <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 text-xs font-medium text-slate-200">Batal</button>
-          <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white">Hapus</button>
+          <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
+          <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white transition-all">Hapus</button>
         </div>
       `);
 
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
       document.getElementById("btn-confirm-delete").onclick = () => {
         transactions = transactions.filter(t => t.id !== id);
-        renderExpense();
+        saveExpenseData();
+        renderExpenseUI();
         ModalEngine.close();
       };
     }
@@ -265,11 +304,11 @@ function initExpenseTracker() {
         <form id="form-edit-expense" class="space-y-3">
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Judul / Deskripsi</label>
-            <input type="text" id="edit-expense-judul" value="${escapeHTML(target.judul)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100">
+            <input type="text" id="edit-expense-judul" value="${escapeHTML(target.judul)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
-            <select id="edit-expense-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100">
+            <select id="edit-expense-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
               ${["Makanan & Minuman", "Gaji & Project", "Transportasi", "Hiburan", "Tagihan & Edukasi", "Lain-Lain"].map(cat => 
                 `<option value="${cat}" ${target.kategori === cat ? 'selected' : ''}>${cat}</option>`
               ).join('')}
@@ -278,11 +317,11 @@ function initExpenseTracker() {
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-xs font-medium text-slate-300 mb-1">Jumlah (Rp)</label>
-              <input type="number" id="edit-expense-jumlah" min="1" value="${target.jumlah}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100">
+              <input type="number" id="edit-expense-jumlah" min="1" value="${target.jumlah}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-300 mb-1">Tipe</label>
-              <select id="edit-expense-tipe" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100">
+              <select id="edit-expense-tipe" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
                 <option value="Pengeluaran" ${target.tipe === 'Pengeluaran' ? 'selected' : ''}>Pengeluaran</option>
                 <option value="Pemasukan" ${target.tipe === 'Pemasukan' ? 'selected' : ''}>Pemasukan</option>
               </select>
@@ -290,11 +329,11 @@ function initExpenseTracker() {
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Tanggal</label>
-            <input type="date" id="edit-expense-tanggal" value="${target.tanggal}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100">
+            <input type="date" id="edit-expense-tanggal" value="${target.tanggal}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
           </div>
           <div class="flex justify-end gap-2 pt-2">
-            <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 text-xs font-medium text-slate-200">Batal</button>
-            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white">Simpan Perubahan</button>
+            <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
+            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Simpan Perubahan</button>
           </div>
         </form>
       `);
@@ -302,23 +341,31 @@ function initExpenseTracker() {
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
       document.getElementById("form-edit-expense").onsubmit = (ev) => {
         ev.preventDefault();
+        const updatedJumlah = parseFloat(document.getElementById("edit-expense-jumlah").value);
+
+        if (isNaN(updatedJumlah) || updatedJumlah <= 0) {
+          ModalEngine.showValidationAlert("Peringatan Validasi", "Jumlah transaksi harus bernilai angka lebih dari 0!");
+          return;
+        }
+
         target.judul = document.getElementById("edit-expense-judul").value.trim();
         target.kategori = document.getElementById("edit-expense-kategori").value;
-        target.jumlah = parseFloat(document.getElementById("edit-expense-jumlah").value);
+        target.jumlah = updatedJumlah;
         target.tipe = document.getElementById("edit-expense-tipe").value;
         target.tanggal = document.getElementById("edit-expense-tanggal").value;
 
-        renderExpense();
+        saveExpenseData();
+        renderExpenseUI();
         ModalEngine.close();
       };
     }
   });
 
-  inputSearch.addEventListener("input", renderExpense);
-  filterTipe.addEventListener("change", renderExpense);
-  sortOption.addEventListener("change", renderExpense);
+  inputSearch.addEventListener("input", renderExpenseUI);
+  filterTipe.addEventListener("change", renderExpenseUI);
+  sortOption.addEventListener("change", renderExpenseUI);
 
-  renderExpense();
+  renderExpenseUI();
 }
 
 /* ==========================================================================
@@ -337,11 +384,15 @@ function initBookmarkManager() {
 
   let bookmarks = JSON.parse(localStorage.getItem("kopdesfite_bookmark")) || [];
 
+  function saveBookmarkData() {
+    localStorage.setItem("kopdesfite_bookmark", JSON.stringify(bookmarks));
+  }
+
   function validateURL(string) {
     return /^https?:\/\/.+/i.test(string.trim());
   }
 
-  function renderBookmark() {
+  function renderBookmarkUI() {
     let processed = [...bookmarks];
 
     const query = inputSearch.value.trim().toLowerCase();
@@ -374,34 +425,9 @@ function initBookmarkManager() {
     processed.forEach(item => {
       const card = document.createElement("div");
       card.className = "p-4 bg-slate-900/70 rounded-xl border border-slate-700/60 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3";
-      card.innerHTML = `
-        <div>
-          <div class="flex justify-between items-start gap-2">
-            <span class="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/50">
-              ${escapeHTML(item.kategori)}
-            </span>
-            <div class="flex items-center gap-1">
-              <button data-id="${item.id}" class="btn-edit-bookmark text-slate-400 hover:text-indigo-400 text-xs p-1">
-                <i class="fa-solid fa-pen"></i>
-              </button>
-              <button data-id="${item.id}" class="btn-delete-bookmark text-slate-400 hover:text-rose-400 text-xs p-1">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-          </div>
-          <h4 class="font-bold text-slate-200 mt-2 text-xs line-clamp-1">${escapeHTML(item.nama)}</h4>
-          <p class="text-[11px] text-slate-400 line-clamp-1 mt-0.5">${escapeHTML(item.url)}</p>
-          ${item.catatan ? `<p class="text-[10px] text-slate-500 italic mt-1 line-clamp-2">${escapeHTML(item.catatan)}</p>` : ''}
-        </div>
-        <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 text-xs font-medium text-indigo-400 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 py-1.5 rounded-lg transition-colors w-full">
-          <span>Kunjungi Tautan</span>
-          <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-        </a>
-      `;
+      card.innerHTML = createBookmarkCardHTML(item);
       containerList.appendChild(card);
     });
-
-    localStorage.setItem("kopdesfite_bookmark", JSON.stringify(bookmarks));
   }
 
   form.addEventListener("submit", (e) => {
@@ -412,24 +438,18 @@ function initBookmarkManager() {
     const catatan = inputCatatan.value.trim();
 
     if (!validateURL(url)) {
-      ModalEngine.open("Peringatan Validasi URL", `
-        <p class="text-xs text-slate-300">URL harus diawali dengan format protokol valid (<strong>http://</strong> atau <strong>https://</strong>)!</p>
-        <div class="flex justify-end pt-2">
-          <button id="btn-close-val-modal" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-xs font-medium text-white">Mengerti</button>
-        </div>
-      `);
-      document.getElementById("btn-close-val-modal").onclick = () => ModalEngine.close();
+      ModalEngine.showValidationAlert("Peringatan Validasi URL", "URL harus diawali dengan format protokol valid (<strong>http://</strong> atau <strong>https://</strong>)!");
       return;
     }
 
-    const newBookmark = {
+    bookmarks.unshift({
       id: Date.now().toString(),
       nama, url, kategori, catatan,
       timestamp: Date.now()
-    };
+    });
 
-    bookmarks.unshift(newBookmark);
-    renderBookmark();
+    saveBookmarkData();
+    renderBookmarkUI();
     form.reset();
   });
 
@@ -443,17 +463,18 @@ function initBookmarkManager() {
       if (!target) return;
 
       ModalEngine.open("Hapus Bookmark", `
-        <p class="text-xs text-slate-300">Hapus tautan "<strong>${escapeHTML(target.nama)}</strong>"?</p>
+        <p class="text-xs text-slate-300 leading-relaxed">Hapus tautan "<strong>${escapeHTML(target.nama)}</strong>"?</p>
         <div class="flex justify-end gap-2 pt-2">
-          <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 text-xs font-medium text-slate-200">Batal</button>
-          <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 text-xs font-medium text-white">Hapus</button>
+          <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
+          <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white transition-all">Hapus</button>
         </div>
       `);
 
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
       document.getElementById("btn-confirm-delete").onclick = () => {
         bookmarks = bookmarks.filter(b => b.id !== id);
-        renderBookmark();
+        saveBookmarkData();
+        renderBookmarkUI();
         ModalEngine.close();
       };
     }
@@ -467,15 +488,15 @@ function initBookmarkManager() {
         <form id="form-edit-bookmark" class="space-y-3">
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Nama Situs</label>
-            <input type="text" id="edit-bm-nama" value="${escapeHTML(target.nama)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100">
+            <input type="text" id="edit-bm-nama" value="${escapeHTML(target.nama)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">URL (http:// atau https://)</label>
-            <input type="url" id="edit-bm-url" value="${escapeHTML(target.url)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100">
+            <input type="url" id="edit-bm-url" value="${escapeHTML(target.url)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
-            <select id="edit-bm-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100">
+            <select id="edit-bm-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
               ${["Pemrograman", "Kuliah & Riset", "Desain & Media", "Produktivitas", "Lainnya"].map(cat => 
                 `<option value="${cat}" ${target.kategori === cat ? 'selected' : ''}>${cat}</option>`
               ).join('')}
@@ -483,11 +504,11 @@ function initBookmarkManager() {
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Catatan Singkat</label>
-            <textarea id="edit-bm-catatan" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 resize-none">${escapeHTML(target.catatan || '')}</textarea>
+            <textarea id="edit-bm-catatan" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 resize-none focus:outline-none focus:border-indigo-500">${escapeHTML(target.catatan || '')}</textarea>
           </div>
           <div class="flex justify-end gap-2 pt-2">
-            <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 text-xs font-medium text-slate-200">Batal</button>
-            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-xs font-medium text-white">Simpan Perubahan</button>
+            <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
+            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Simpan Perubahan</button>
           </div>
         </form>
       `);
@@ -496,8 +517,9 @@ function initBookmarkManager() {
       document.getElementById("form-edit-bookmark").onsubmit = (ev) => {
         ev.preventDefault();
         const updatedUrl = document.getElementById("edit-bm-url").value.trim();
+
         if (!validateURL(updatedUrl)) {
-          alert("URL harus diawali http:// atau https://");
+          ModalEngine.showValidationAlert("Peringatan Validasi URL", "URL harus diawali dengan format protokol valid (<strong>http://</strong> atau <strong>https://</strong>)!");
           return;
         }
 
@@ -506,16 +528,17 @@ function initBookmarkManager() {
         target.kategori = document.getElementById("edit-bm-kategori").value;
         target.catatan = document.getElementById("edit-bm-catatan").value.trim();
 
-        renderBookmark();
+        saveBookmarkData();
+        renderBookmarkUI();
         ModalEngine.close();
       };
     }
   });
 
-  inputSearch.addEventListener("input", renderBookmark);
-  sortOption.addEventListener("change", renderBookmark);
+  inputSearch.addEventListener("input", renderBookmarkUI);
+  sortOption.addEventListener("change", renderBookmarkUI);
 
-  renderBookmark();
+  renderBookmarkUI();
 }
 
 /* ==========================================================================
@@ -635,6 +658,7 @@ function initQuizApp() {
   function showFeedback(selectedIndex, isTimeout) {
     const q = quizData[currentIndex];
     const optionBtns = elOptions.querySelectorAll(".option-btn");
+    const pointsPerQuestion = Math.round(100 / quizData.length);
 
     optionBtns.forEach(btn => btn.disabled = true);
 
@@ -645,7 +669,7 @@ function initQuizApp() {
     } else if (selectedIndex === q.jawaban) {
       score += (100 / quizData.length);
       elFeedback.className = "p-3 rounded-xl text-xs font-medium transition-all text-center bg-emerald-950/80 border border-emerald-800 text-emerald-300 block";
-      elFeedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> Jawaban Tepat! (+20 poin)`;
+      elFeedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> Jawaban Tepat! (+${pointsPerQuestion} poin)`;
       optionBtns[selectedIndex].classList.add("bg-emerald-950/80", "border-emerald-500");
     } else {
       elFeedback.className = "p-3 rounded-xl text-xs font-medium transition-all text-center bg-rose-950/80 border border-rose-800 text-rose-300 block";
