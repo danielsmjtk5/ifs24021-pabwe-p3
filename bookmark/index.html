@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Manager | KopdesFITE</title>
+  <meta name="description"
+    content="Simpan dan kelola tautan website favorit lengkap dengan kategori dan catatan singkat.">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="stylesheet" href="/assets/style.css">
+  <!-- Font Awesome dimuat tanpa memblokir render -->
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style"
+    onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  </noscript>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700/80 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3.5 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <i class="fa-solid fa-graduation-cap text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white">KopdesFITE</h1>
+          <p class="text-xs text-slate-400">Expense Tracker • Bookmark Manager • Quiz App</p>
+        </div>
+      </div>
+      <nav class="w-full md:w-auto" aria-label="Navigasi utama">
+        <ul
+          class="flex bg-slate-900/90 p-1 rounded-xl border border-slate-700/70 justify-between md:justify-start gap-1">
+          <li>
+            <a href="/"
+              class="px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex items-center gap-2 text-slate-400 hover:text-slate-200">
+              <i class="fa-solid fa-receipt"></i><span>Catatan Keuangan</span>
+            </a>
+          </li>
+          <li>
+            <a href="/bookmark/" aria-current="page"
+              class="px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex items-center gap-2 bg-indigo-600 text-white shadow-md">
+              <i class="fa-solid fa-bookmark"></i><span>Link Manager</span>
+            </a>
+          </li>
+          <li>
+            <a href="/quiz/"
+              class="px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex items-center gap-2 text-slate-400 hover:text-slate-200">
+              <i class="fa-solid fa-circle-question"></i><span>Kuis Interaktif</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-8">
+    <section id="tab-content-bookmark" class="space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="panel lg:col-span-1 h-fit">
+          <h2 class="text-base font-bold text-slate-100 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-link text-indigo-400"></i> Tambah Bookmark
+          </h2>
+          <form id="form-bookmark" novalidate class="space-y-4">
+            <div>
+              <label for="bookmark-nama" class="lbl">Nama / Judul Situs *</label>
+              <input type="text" id="bookmark-nama" required placeholder="Contoh: CIS Del, GitHub" class="inp">
+            </div>
+            <div>
+              <label for="bookmark-url" class="lbl">URL Web * (http:// atau https://)</label>
+              <input type="url" id="bookmark-url" required placeholder="https://cis.del.ac.id" class="inp">
+            </div>
+            <div>
+              <label for="bookmark-kategori" class="lbl">Kategori / Tag *</label>
+              <select id="bookmark-kategori" class="inp">
+                <option value="Pemrograman">Pemrograman</option>
+                <option value="Kuliah & Riset">Kuliah & Riset</option>
+                <option value="Desain & Media">Desain & Media</option>
+                <option value="Produktivitas">Produktivitas</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div>
+              <label for="bookmark-catatan" class="lbl">Catatan Singkat (Opsional)</label>
+              <textarea id="bookmark-catatan" rows="2" placeholder="Catatan opsional..."
+                class="inp resize-none"></textarea>
+            </div>
+            <button type="submit" class="btn"><i class="fa-solid fa-bookmark"></i> Simpan Bookmark</button>
+          </form>
+        </div>
+
+        <div class="panel lg:col-span-2 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input type="text" id="bookmark-search" aria-label="Cari bookmark"
+              placeholder="Cari nama, URL, atau kategori..." class="flt">
+            <select id="bookmark-sort" aria-label="Urutkan bookmark" class="flt">
+              <option value="terbaru">Terbaru Simpan</option>
+              <option value="az">Judul (A - Z)</option>
+              <option value="za">Judul (Z - A)</option>
+            </select>
+          </div>
+          <div id="daftar-bookmark" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[440px] overflow-y-auto pr-1">
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal-backdrop"
+    class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4"
+      role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-700">
+        <h2 id="modal-title" class="text-base font-bold text-slate-100">Modal Title</h2>
+        <button id="btn-modal-close" aria-label="Tutup" class="text-slate-400 hover:text-slate-200"><i
+            class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="modal-body" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <footer class="bg-slate-800/80 border-t border-slate-700/80 py-4 mt-auto">
+    <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400">
+      <p>&copy; 2026 KopdesFITE • Praktikum Pemrograman Web (PABWE P3)</p>
+    </div>
+  </footer>
+
+  <script src="/assets/script.js" defer></script>
+</body>
+
+</html>
