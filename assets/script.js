@@ -70,18 +70,44 @@ const ModalEngine = {
     if (btnAlertOk) {
       btnAlertOk.onclick = () => this.close();
     }
+  },
+
+  showFieldErrorsAlert(title, errors) {
+    const errorItemsHTML = errors.map(err => `
+      <li class="flex items-start gap-2 text-rose-300">
+        <i class="fa-solid fa-circle-exclamation mt-0.5 text-rose-400 text-xs flex-shrink-0"></i>
+        <span><strong class="text-slate-200">${escapeHTML(err.label)}:</strong> ${escapeHTML(err.message)}</span>
+      </li>
+    `).join("");
+
+    this.open(title, `
+      <div class="space-y-3">
+        <p class="text-xs text-slate-300 leading-relaxed font-medium">Terdapat data input yang belum sesuai validasi:</p>
+        <ul class="space-y-2 text-xs bg-rose-950/40 border border-rose-900/60 p-3 rounded-xl">
+          ${errorItemsHTML}
+        </ul>
+      </div>
+      <div class="flex justify-end pt-2">
+        <button id="btn-modal-alert-ok" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Perbaiki Data</button>
+      </div>
+    `);
+    const btnAlertOk = document.getElementById("btn-modal-alert-ok");
+    if (btnAlertOk) {
+      btnAlertOk.onclick = () => this.close();
+    }
   }
 };
 
-/* Escaping String XSS Helper */
-function escapeHTML(str) {
-  if (typeof str !== "string") return str;
+/* Escaping String XSS Helper (Aman untuk String, Angka, Tanggal, dll) */
+function escapeHTML(val) {
+  if (val === null || val === undefined) return "";
+  const str = String(val);
   return str.replace(/[&<>'"]/g, 
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
   );
 }
 
-/* Helper HTML Card Generation untuk Menghindari Duplikasi Template */
+/* Helper HTML Card Generation untuk Menghindari Duplikasi Template (100% Escaped) */
 function createExpenseCardHTML(item, isIncome, formattedAmount) {
   return `
     <div class="flex items-center gap-3">
@@ -92,19 +118,19 @@ function createExpenseCardHTML(item, isIncome, formattedAmount) {
         <h4 class="text-xs font-semibold text-slate-200">${escapeHTML(item.judul)}</h4>
         <div class="flex items-center gap-2 mt-0.5">
           <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">${escapeHTML(item.kategori)}</span>
-          <span class="text-[10px] text-slate-500">${item.tanggal}</span>
+          <span class="text-[10px] text-slate-500">${escapeHTML(item.tanggal)}</span>
         </div>
       </div>
     </div>
     <div class="flex items-center gap-3">
       <span class="text-xs font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}">
-        ${isIncome ? '+' : '-'} ${formattedAmount}
+        ${isIncome ? '+' : '-'} ${escapeHTML(formattedAmount)}
       </span>
       <div class="flex items-center gap-1">
-        <button data-id="${item.id}" class="btn-edit-expense p-1 text-slate-400 hover:text-indigo-400 text-xs transition-colors">
+        <button data-id="${escapeHTML(item.id)}" class="btn-edit-expense p-1 text-slate-400 hover:text-indigo-400 text-xs transition-colors" title="Ubah Transaksi">
           <i class="fa-solid fa-pen"></i>
         </button>
-        <button data-id="${item.id}" class="btn-delete-expense p-1 text-slate-400 hover:text-rose-400 text-xs transition-colors">
+        <button data-id="${escapeHTML(item.id)}" class="btn-delete-expense p-1 text-slate-400 hover:text-rose-400 text-xs transition-colors" title="Hapus Transaksi">
           <i class="fa-solid fa-trash-can"></i>
         </button>
       </div>
@@ -112,6 +138,81 @@ function createExpenseCardHTML(item, isIncome, formattedAmount) {
   `;
 }
 
+/* DOM Element Card Builder menggunakan createElement & textContent (Mencegah XSS & Konsisten) */
+function createExpenseCardElement(item, isIncome, formattedAmount) {
+  const card = document.createElement("div");
+  card.className = "flex items-center justify-between p-3.5 bg-slate-900/70 rounded-xl border border-slate-700/60 hover:border-slate-600 transition-all";
+
+  // Left Section
+  const leftCol = document.createElement("div");
+  leftCol.className = "flex items-center gap-3";
+
+  const iconBox = document.createElement("div");
+  iconBox.className = `w-9 h-9 rounded-lg flex items-center justify-center ${
+    isIncome ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50' : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'
+  }`;
+  const icon = document.createElement("i");
+  icon.className = `fa-solid ${isIncome ? 'fa-arrow-down' : 'fa-arrow-up'} text-xs`;
+  iconBox.appendChild(icon);
+
+  const textInfo = document.createElement("div");
+  const title = document.createElement("h4");
+  title.className = "text-xs font-semibold text-slate-200";
+  title.textContent = item.judul;
+
+  const metaRow = document.createElement("div");
+  metaRow.className = "flex items-center gap-2 mt-0.5";
+
+  const catBadge = document.createElement("span");
+  catBadge.className = "text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700";
+  catBadge.textContent = item.kategori;
+
+  const dateSpan = document.createElement("span");
+  dateSpan.className = "text-[10px] text-slate-500";
+  dateSpan.textContent = item.tanggal;
+
+  metaRow.appendChild(catBadge);
+  metaRow.appendChild(dateSpan);
+  textInfo.appendChild(title);
+  textInfo.appendChild(metaRow);
+
+  leftCol.appendChild(iconBox);
+  leftCol.appendChild(textInfo);
+
+  // Right Section
+  const rightCol = document.createElement("div");
+  rightCol.className = "flex items-center gap-3";
+
+  const amountSpan = document.createElement("span");
+  amountSpan.className = `text-xs font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`;
+  amountSpan.textContent = `${isIncome ? '+' : '-'} ${formattedAmount}`;
+
+  const actionGroup = document.createElement("div");
+  actionGroup.className = "flex items-center gap-1";
+
+  const editBtn = document.createElement("button");
+  editBtn.className = "btn-edit-expense p-1 text-slate-400 hover:text-indigo-400 text-xs transition-colors";
+  editBtn.setAttribute("data-id", item.id);
+  editBtn.setAttribute("title", "Ubah Transaksi");
+  editBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "btn-delete-expense p-1 text-slate-400 hover:text-rose-400 text-xs transition-colors";
+  deleteBtn.setAttribute("data-id", item.id);
+  deleteBtn.setAttribute("title", "Hapus Transaksi");
+  deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+
+  actionGroup.appendChild(editBtn);
+  actionGroup.appendChild(deleteBtn);
+  rightCol.appendChild(amountSpan);
+  rightCol.appendChild(actionGroup);
+
+  card.appendChild(leftCol);
+  card.appendChild(rightCol);
+  return card;
+}
+
+/* Helper HTML Card Generation untuk Bookmark (100% Escaped) */
 function createBookmarkCardHTML(item) {
   return `
     <div>
@@ -120,10 +221,10 @@ function createBookmarkCardHTML(item) {
           ${escapeHTML(item.kategori)}
         </span>
         <div class="flex items-center gap-1">
-          <button data-id="${item.id}" class="btn-edit-bookmark text-slate-400 hover:text-indigo-400 text-xs p-1 transition-colors">
+          <button data-id="${escapeHTML(item.id)}" class="btn-edit-bookmark text-slate-400 hover:text-indigo-400 text-xs p-1 transition-colors" title="Ubah Bookmark">
             <i class="fa-solid fa-pen"></i>
           </button>
-          <button data-id="${item.id}" class="btn-delete-bookmark text-slate-400 hover:text-rose-400 text-xs p-1 transition-colors">
+          <button data-id="${escapeHTML(item.id)}" class="btn-delete-bookmark text-slate-400 hover:text-rose-400 text-xs p-1 transition-colors" title="Hapus Bookmark">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
@@ -137,6 +238,77 @@ function createBookmarkCardHTML(item) {
       <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
     </a>
   `;
+}
+
+/* DOM Element Bookmark Builder menggunakan createElement & textContent (Mencegah XSS & Konsisten) */
+function createBookmarkCardElement(item) {
+  const card = document.createElement("div");
+  card.className = "p-4 bg-slate-900/70 rounded-xl border border-slate-700/60 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3";
+
+  const topSection = document.createElement("div");
+
+  const headerRow = document.createElement("div");
+  headerRow.className = "flex justify-between items-start gap-2";
+
+  const badge = document.createElement("span");
+  badge.className = "text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/50";
+  badge.textContent = item.kategori;
+
+  const actionGroup = document.createElement("div");
+  actionGroup.className = "flex items-center gap-1";
+
+  const editBtn = document.createElement("button");
+  editBtn.className = "btn-edit-bookmark text-slate-400 hover:text-indigo-400 text-xs p-1 transition-colors";
+  editBtn.setAttribute("data-id", item.id);
+  editBtn.setAttribute("title", "Ubah Bookmark");
+  editBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "btn-delete-bookmark text-slate-400 hover:text-rose-400 text-xs p-1 transition-colors";
+  deleteBtn.setAttribute("data-id", item.id);
+  deleteBtn.setAttribute("title", "Hapus Bookmark");
+  deleteBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+
+  actionGroup.appendChild(editBtn);
+  actionGroup.appendChild(deleteBtn);
+  headerRow.appendChild(badge);
+  headerRow.appendChild(actionGroup);
+
+  const title = document.createElement("h4");
+  title.className = "font-bold text-slate-200 mt-2 text-xs line-clamp-1";
+  title.textContent = item.nama;
+
+  const urlDisplay = document.createElement("p");
+  urlDisplay.className = "text-[11px] text-slate-400 line-clamp-1 mt-0.5";
+  urlDisplay.textContent = item.url;
+
+  topSection.appendChild(headerRow);
+  topSection.appendChild(title);
+  topSection.appendChild(urlDisplay);
+
+  if (item.catatan) {
+    const note = document.createElement("p");
+    note.className = "text-[10px] text-slate-500 italic mt-1 line-clamp-2";
+    note.textContent = item.catatan;
+    topSection.appendChild(note);
+  }
+
+  const visitLink = document.createElement("a");
+  visitLink.href = item.url;
+  visitLink.target = "_blank";
+  visitLink.rel = "noopener noreferrer";
+  visitLink.className = "inline-flex items-center justify-center gap-2 text-xs font-medium text-indigo-400 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 py-1.5 rounded-lg transition-colors w-full";
+
+  const linkText = document.createElement("span");
+  linkText.textContent = "Kunjungi Tautan";
+  const linkIcon = document.createElement("i");
+  linkIcon.className = "fa-solid fa-arrow-up-right-from-square text-[10px]";
+  visitLink.appendChild(linkText);
+  visitLink.appendChild(linkIcon);
+
+  card.appendChild(topSection);
+  card.appendChild(visitLink);
+  return card;
 }
 
 /* Helper Format Tanggal Lokal YYYY-MM-DD (Aman Lintas Browser & iOS Safari) */
@@ -157,15 +329,15 @@ function setSafeDateInputValue(inputElement, date = new Date()) {
 function createModalActionButtonsHTML(submitText = "Simpan Perubahan", cancelText = "Batal") {
   return `
     <div class="flex justify-end gap-2 pt-2">
-      <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">${cancelText}</button>
-      <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">${submitText}</button>
+      <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">${escapeHTML(cancelText)}</button>
+      <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">${escapeHTML(submitText)}</button>
     </div>
   `;
 }
 
 function createEditModalFormHTML(formId, fieldsHTML, submitText = "Simpan Perubahan") {
   return `
-    <form id="${formId}" class="space-y-3">
+    <form id="${escapeHTML(formId)}" class="space-y-3">
       ${fieldsHTML}
       ${createModalActionButtonsHTML(submitText)}
     </form>
@@ -177,7 +349,7 @@ function createConfirmModalHTML(messageHtml, confirmBtnText = "Hapus") {
     <p class="text-xs text-slate-300 leading-relaxed">${messageHtml}</p>
     <div class="flex justify-end gap-2 pt-2">
       <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
-      <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white transition-all">${confirmBtnText}</button>
+      <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white transition-all">${escapeHTML(confirmBtnText)}</button>
     </div>
   `;
 }
@@ -193,14 +365,14 @@ function createExpenseEditModalHTML(target) {
       <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
       <select id="edit-expense-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
         ${categories.map(cat => 
-          `<option value="${cat}" ${target.kategori === cat ? 'selected' : ''}>${cat}</option>`
+          `<option value="${escapeHTML(cat)}" ${target.kategori === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`
         ).join('')}
       </select>
     </div>
     <div class="grid grid-cols-2 gap-2">
       <div>
         <label class="block text-xs font-medium text-slate-300 mb-1">Jumlah (Rp)</label>
-        <input type="number" id="edit-expense-jumlah" min="1" value="${target.jumlah}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+        <input type="number" id="edit-expense-jumlah" min="1" value="${escapeHTML(target.jumlah)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
       </div>
       <div>
         <label class="block text-xs font-medium text-slate-300 mb-1">Tipe</label>
@@ -233,7 +405,7 @@ function createBookmarkEditModalHTML(target) {
       <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
       <select id="edit-bm-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
         ${categories.map(cat => 
-          `<option value="${cat}" ${target.kategori === cat ? 'selected' : ''}>${cat}</option>`
+          `<option value="${escapeHTML(cat)}" ${target.kategori === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`
         ).join('')}
       </select>
     </div>
@@ -243,6 +415,165 @@ function createBookmarkEditModalHTML(target) {
     </div>
   `;
   return createEditModalFormHTML("form-edit-bookmark", fieldsHTML);
+}
+
+/* Helper Validasi Per-Field dengan Pesan Spesifik & Feedback Informatif */
+function validateExpenseForm({ judul, kategori, jumlah, tipe, tanggal }) {
+  const errors = [];
+  const validCategories = ["Makanan & Minuman", "Gaji & Project", "Transportasi", "Hiburan", "Tagihan & Edukasi", "Lain-Lain"];
+  const validTypes = ["Pengeluaran", "Pemasukan"];
+
+  const trimmedJudul = (judul || "").trim();
+  if (!trimmedJudul) {
+    errors.push({
+      fieldId: "judul",
+      label: "Judul / Deskripsi",
+      message: "Judul transaksi wajib diisi dan tidak boleh hanya berisi spasi."
+    });
+  } else if (trimmedJudul.length < 3) {
+    errors.push({
+      fieldId: "judul",
+      label: "Judul / Deskripsi",
+      message: "Judul transaksi minimal 3 karakter agar informatif."
+    });
+  }
+
+  if (!kategori || !validCategories.includes(kategori)) {
+    errors.push({
+      fieldId: "kategori",
+      label: "Kategori",
+      message: "Silakan pilih salah satu kategori yang tersedia."
+    });
+  }
+
+  const numJumlah = Number(jumlah);
+  if (jumlah === "" || jumlah === null || jumlah === undefined || isNaN(numJumlah)) {
+    errors.push({
+      fieldId: "jumlah",
+      label: "Jumlah (Rp)",
+      message: "Nominal transaksi harus diisi dengan angka."
+    });
+  } else if (numJumlah <= 0) {
+    errors.push({
+      fieldId: "jumlah",
+      label: "Jumlah (Rp)",
+      message: "Nominal transaksi harus berupa angka lebih besar dari 0 (Rp)."
+    });
+  }
+
+  if (!tipe || !validTypes.includes(tipe)) {
+    errors.push({
+      fieldId: "tipe",
+      label: "Tipe Transaksi",
+      message: "Tipe transaksi harus dipilih antara 'Pengeluaran' atau 'Pemasukan'."
+    });
+  }
+
+  const trimmedTanggal = (tanggal || "").trim();
+  if (!trimmedTanggal) {
+    errors.push({
+      fieldId: "tanggal",
+      label: "Tanggal",
+      message: "Tanggal transaksi wajib dipilih."
+    });
+  } else if (isNaN(new Date(trimmedTanggal).getTime())) {
+    errors.push({
+      fieldId: "tanggal",
+      label: "Tanggal",
+      message: "Format tanggal tidak valid (gunakan format YYYY-MM-DD)."
+    });
+  }
+
+  return errors;
+}
+
+function validateBookmarkForm({ nama, url, kategori }) {
+  const errors = [];
+  const validCategories = ["Pemrograman", "Kuliah & Riset", "Desain & Media", "Produktivitas", "Lainnya"];
+
+  const trimmedNama = (nama || "").trim();
+  if (!trimmedNama) {
+    errors.push({
+      fieldId: "nama",
+      label: "Nama Situs",
+      message: "Nama situs bookmark wajib diisi dan tidak boleh kosong."
+    });
+  } else if (trimmedNama.length < 2) {
+    errors.push({
+      fieldId: "nama",
+      label: "Nama Situs",
+      message: "Nama situs minimal 2 karakter."
+    });
+  }
+
+  const trimmedUrl = (url || "").trim();
+  if (!trimmedUrl) {
+    errors.push({
+      fieldId: "url",
+      label: "URL Tautan",
+      message: "Alamat URL website wajib diisi."
+    });
+  } else if (!/^https?:\/\/.+/i.test(trimmedUrl)) {
+    errors.push({
+      fieldId: "url",
+      label: "URL Tautan",
+      message: "URL harus diawali dengan protokol valid ('http://' atau 'https://'), contoh: https://del.ac.id"
+    });
+  } else {
+    try {
+      new URL(trimmedUrl);
+    } catch (_) {
+      errors.push({
+        fieldId: "url",
+        label: "URL Tautan",
+        message: "Format struktur alamat URL tidak valid."
+      });
+    }
+  }
+
+  if (!kategori || !validCategories.includes(kategori)) {
+    errors.push({
+      fieldId: "kategori",
+      label: "Kategori",
+      message: "Silakan pilih salah satu kategori bookmark yang tersedia."
+    });
+  }
+
+  return errors;
+}
+
+/* Helper Highlight Border Input ketika Validasi Gagal */
+function applyFieldValidationHighlights(formEl, errors) {
+  if (!formEl) return;
+  const inputs = formEl.querySelectorAll("input, select, textarea");
+  inputs.forEach(input => {
+    input.classList.remove("border-rose-500", "ring-1", "ring-rose-500/50");
+    input.classList.add("border-slate-700");
+  });
+
+  errors.forEach(err => {
+    const input = formEl.querySelector(`#${err.fieldId}`) || 
+                  formEl.querySelector(`[id$="-${err.fieldId}"]`);
+    if (input) {
+      input.classList.add("border-rose-500", "ring-1", "ring-rose-500/50");
+      input.classList.remove("border-slate-700");
+    }
+  });
+}
+
+function attachInputClearHighlight(formEl) {
+  if (!formEl) return;
+  const inputs = formEl.querySelectorAll("input, select, textarea");
+  inputs.forEach(input => {
+    input.addEventListener("input", () => {
+      input.classList.remove("border-rose-500", "ring-1", "ring-rose-500/50");
+      input.classList.add("border-slate-700");
+    });
+    input.addEventListener("change", () => {
+      input.classList.remove("border-rose-500", "ring-1", "ring-rose-500/50");
+      input.classList.add("border-slate-700");
+    });
+  });
 }
 
 /* ==========================================================================
@@ -313,6 +644,7 @@ function initExpenseTracker() {
   const sortOption = document.getElementById("expense-sort");
 
   setSafeDateInputValue(inputTanggal);
+  attachInputClearHighlight(form);
 
   let transactions = JSON.parse(localStorage.getItem("kopdesfite_expense")) || [];
 
@@ -357,23 +689,20 @@ function initExpenseTracker() {
       if (sortVal === "terkecil") return a.jumlah - b.jumlah;
     });
 
-    // 3. Render List DOM
+    // 3. Render List DOM dengan createElement & textContent (Bebas Risiko XSS)
     containerList.innerHTML = "";
 
     if (processed.length === 0) {
-      containerList.innerHTML = `
-        <div class="text-center py-10 text-slate-500 text-xs border border-dashed border-slate-700 rounded-xl">
-          <i class="fa-solid fa-receipt text-2xl mb-2 block"></i>
-          Belum ada catatan transaksi yang sesuai.
-        </div>`;
+      const emptyDiv = document.createElement("div");
+      emptyDiv.className = "text-center py-10 text-slate-500 text-xs border border-dashed border-slate-700 rounded-xl";
+      emptyDiv.innerHTML = '<i class="fa-solid fa-receipt text-2xl mb-2 block"></i> Belum ada catatan transaksi yang sesuai.';
+      containerList.appendChild(emptyDiv);
       return;
     }
 
     processed.forEach(item => {
       const isIncome = item.tipe === "Pemasukan";
-      const card = document.createElement("div");
-      card.className = "flex items-center justify-between p-3.5 bg-slate-900/70 rounded-xl border border-slate-700/60 hover:border-slate-600 transition-all";
-      card.innerHTML = createExpenseCardHTML(item, isIncome, formatIDR(item.jumlah));
+      const card = createExpenseCardElement(item, isIncome, formatIDR(item.jumlah));
       containerList.appendChild(card);
     });
   }
@@ -381,20 +710,26 @@ function initExpenseTracker() {
   // Event Handlers
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const judul = inputJudul.value.trim();
+    const judul = inputJudul.value;
     const kategori = inputKategori.value;
-    const jumlah = parseFloat(inputJumlah.value);
+    const jumlah = inputJumlah.value;
     const tipe = inputTipe.value;
     const tanggal = inputTanggal.value;
 
-    if (!judul || isNaN(jumlah) || jumlah <= 0 || !tanggal) {
-      ModalEngine.showValidationAlert("Peringatan Validasi", "Harap isi seluruh field wajib dengan nominal angka valid (lebih dari 0)!");
+    const validationErrors = validateExpenseForm({ judul, kategori, jumlah, tipe, tanggal });
+    if (validationErrors.length > 0) {
+      applyFieldValidationHighlights(form, validationErrors);
+      ModalEngine.showFieldErrorsAlert("Peringatan Validasi Transaksi", validationErrors);
       return;
     }
 
     transactions.push({
       id: Date.now().toString(),
-      judul, kategori, jumlah, tipe, tanggal
+      judul: judul.trim(),
+      kategori,
+      jumlah: parseFloat(jumlah),
+      tipe,
+      tanggal
     });
 
     saveExpenseData();
@@ -432,21 +767,37 @@ function initExpenseTracker() {
 
       ModalEngine.open("Ubah Transaksi", createExpenseEditModalHTML(target));
 
+      const editForm = document.getElementById("form-edit-expense");
+      attachInputClearHighlight(editForm);
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
-      document.getElementById("form-edit-expense").onsubmit = (ev) => {
-        ev.preventDefault();
-        const updatedJumlah = parseFloat(document.getElementById("edit-expense-jumlah").value);
 
-        if (isNaN(updatedJumlah) || updatedJumlah <= 0) {
-          ModalEngine.showValidationAlert("Peringatan Validasi", "Jumlah transaksi harus bernilai angka lebih dari 0!");
+      editForm.onsubmit = (ev) => {
+        ev.preventDefault();
+        const updatedJudul = document.getElementById("edit-expense-judul").value;
+        const updatedKategori = document.getElementById("edit-expense-kategori").value;
+        const updatedJumlah = document.getElementById("edit-expense-jumlah").value;
+        const updatedTipe = document.getElementById("edit-expense-tipe").value;
+        const updatedTanggal = document.getElementById("edit-expense-tanggal").value;
+
+        const validationErrors = validateExpenseForm({
+          judul: updatedJudul,
+          kategori: updatedKategori,
+          jumlah: updatedJumlah,
+          tipe: updatedTipe,
+          tanggal: updatedTanggal
+        });
+
+        if (validationErrors.length > 0) {
+          applyFieldValidationHighlights(editForm, validationErrors);
+          ModalEngine.showFieldErrorsAlert("Peringatan Validasi Ubah Transaksi", validationErrors);
           return;
         }
 
-        target.judul = document.getElementById("edit-expense-judul").value.trim();
-        target.kategori = document.getElementById("edit-expense-kategori").value;
-        target.jumlah = updatedJumlah;
-        target.tipe = document.getElementById("edit-expense-tipe").value;
-        target.tanggal = document.getElementById("edit-expense-tanggal").value;
+        target.judul = updatedJudul.trim();
+        target.kategori = updatedKategori;
+        target.jumlah = parseFloat(updatedJumlah);
+        target.tipe = updatedTipe;
+        target.tanggal = updatedTanggal;
 
         saveExpenseData();
         renderExpenseUI();
@@ -476,14 +827,12 @@ function initBookmarkManager() {
   const inputSearch = document.getElementById("bookmark-search");
   const sortOption = document.getElementById("bookmark-sort");
 
+  attachInputClearHighlight(form);
+
   let bookmarks = JSON.parse(localStorage.getItem("kopdesfite_bookmark")) || [];
 
   function saveBookmarkData() {
     localStorage.setItem("kopdesfite_bookmark", JSON.stringify(bookmarks));
-  }
-
-  function validateURL(string) {
-    return /^https?:\/\/.+/i.test(string.trim());
   }
 
   function renderBookmarkUI() {
@@ -505,40 +854,43 @@ function initBookmarkManager() {
       return b.timestamp - a.timestamp;
     });
 
+    // Render List DOM dengan createElement & textContent (Bebas Risiko XSS)
     containerList.innerHTML = "";
 
     if (processed.length === 0) {
-      containerList.innerHTML = `
-        <div class="col-span-full text-center py-10 text-slate-500 text-xs border border-dashed border-slate-700 rounded-xl">
-          <i class="fa-solid fa-bookmark text-2xl mb-2 block"></i>
-          Tidak ada tautan tersimpan.
-        </div>`;
+      const emptyDiv = document.createElement("div");
+      emptyDiv.className = "col-span-full text-center py-10 text-slate-500 text-xs border border-dashed border-slate-700 rounded-xl";
+      emptyDiv.innerHTML = '<i class="fa-solid fa-bookmark text-2xl mb-2 block"></i> Tidak ada tautan tersimpan.';
+      containerList.appendChild(emptyDiv);
       return;
     }
 
     processed.forEach(item => {
-      const card = document.createElement("div");
-      card.className = "p-4 bg-slate-900/70 rounded-xl border border-slate-700/60 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3";
-      card.innerHTML = createBookmarkCardHTML(item);
+      const card = createBookmarkCardElement(item);
       containerList.appendChild(card);
     });
   }
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const nama = inputNama.value.trim();
-    const url = inputUrl.value.trim();
+    const nama = inputNama.value;
+    const url = inputUrl.value;
     const kategori = inputKategori.value;
     const catatan = inputCatatan.value.trim();
 
-    if (!validateURL(url)) {
-      ModalEngine.showValidationAlert("Peringatan Validasi URL", "URL harus diawali dengan format protokol valid (<strong>http://</strong> atau <strong>https://</strong>)!");
+    const validationErrors = validateBookmarkForm({ nama, url, kategori });
+    if (validationErrors.length > 0) {
+      applyFieldValidationHighlights(form, validationErrors);
+      ModalEngine.showFieldErrorsAlert("Peringatan Validasi Bookmark", validationErrors);
       return;
     }
 
     bookmarks.unshift({
       id: Date.now().toString(),
-      nama, url, kategori, catatan,
+      nama: nama.trim(),
+      url: url.trim(),
+      kategori,
+      catatan,
       timestamp: Date.now()
     });
 
@@ -576,20 +928,33 @@ function initBookmarkManager() {
 
       ModalEngine.open("Ubah Bookmark", createBookmarkEditModalHTML(target));
 
+      const editForm = document.getElementById("form-edit-bookmark");
+      attachInputClearHighlight(editForm);
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
-      document.getElementById("form-edit-bookmark").onsubmit = (ev) => {
-        ev.preventDefault();
-        const updatedUrl = document.getElementById("edit-bm-url").value.trim();
 
-        if (!validateURL(updatedUrl)) {
-          ModalEngine.showValidationAlert("Peringatan Validasi URL", "URL harus diawali dengan format protokol valid (<strong>http://</strong> atau <strong>https://</strong>)!");
+      editForm.onsubmit = (ev) => {
+        ev.preventDefault();
+        const updatedNama = document.getElementById("edit-bm-nama").value;
+        const updatedUrl = document.getElementById("edit-bm-url").value;
+        const updatedKategori = document.getElementById("edit-bm-kategori").value;
+        const updatedCatatan = document.getElementById("edit-bm-catatan").value.trim();
+
+        const validationErrors = validateBookmarkForm({
+          nama: updatedNama,
+          url: updatedUrl,
+          kategori: updatedKategori
+        });
+
+        if (validationErrors.length > 0) {
+          applyFieldValidationHighlights(editForm, validationErrors);
+          ModalEngine.showFieldErrorsAlert("Peringatan Validasi Ubah Bookmark", validationErrors);
           return;
         }
 
-        target.nama = document.getElementById("edit-bm-nama").value.trim();
-        target.url = updatedUrl;
-        target.kategori = document.getElementById("edit-bm-kategori").value;
-        target.catatan = document.getElementById("edit-bm-catatan").value.trim();
+        target.nama = updatedNama.trim();
+        target.url = updatedUrl.trim();
+        target.kategori = updatedKategori;
+        target.catatan = updatedCatatan;
 
         saveBookmarkData();
         renderBookmarkUI();
@@ -689,10 +1054,17 @@ function initQuizApp() {
     q.opsi.forEach((opsiText, i) => {
       const btn = document.createElement("button");
       btn.className = "w-full text-left p-3.5 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-indigo-950/50 hover:border-indigo-500/50 text-xs font-medium text-slate-200 transition-all flex items-center gap-3 option-btn";
-      btn.innerHTML = `
-        <span class="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400 border border-slate-700">${String.fromCharCode(65 + i)}</span>
-        <span class="flex-grow">${escapeHTML(opsiText)}</span>
-      `;
+      
+      const badge = document.createElement("span");
+      badge.className = "w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400 border border-slate-700 flex-shrink-0";
+      badge.textContent = String.fromCharCode(65 + i);
+
+      const label = document.createElement("span");
+      label.className = "flex-grow";
+      label.textContent = opsiText;
+
+      btn.appendChild(badge);
+      btn.appendChild(label);
       btn.onclick = () => selectOption(i);
       elOptions.appendChild(btn);
     });
