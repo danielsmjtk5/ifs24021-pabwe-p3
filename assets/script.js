@@ -4,6 +4,7 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+  ModalEngine.init();
   initTabSystem();
   initExpenseTracker();
   initBookmarkManager();
@@ -16,20 +17,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* Universal Custom Modal Engine */
 const ModalEngine = {
-  backdrop: document.getElementById("modal-backdrop"),
-  title: document.getElementById("modal-title"),
-  body: document.getElementById("modal-body"),
-  closeBtn: document.getElementById("btn-modal-close"),
+  backdrop: null,
+  title: null,
+  body: null,
+  closeBtn: null,
+
+  init() {
+    this.backdrop = document.getElementById("modal-backdrop");
+    this.title = document.getElementById("modal-title");
+    this.body = document.getElementById("modal-body");
+    this.closeBtn = document.getElementById("btn-modal-close");
+
+    if (this.closeBtn) {
+      this.closeBtn.addEventListener("click", () => this.close());
+    }
+
+    if (this.backdrop) {
+      this.backdrop.addEventListener("click", (e) => {
+        if (e.target === this.backdrop) this.close();
+      });
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.backdrop && !this.backdrop.classList.contains("hidden")) {
+        this.close();
+      }
+    });
+  },
 
   open(modalTitle, contentHtml) {
-    this.title.textContent = modalTitle;
-    this.body.innerHTML = contentHtml;
-    this.backdrop.classList.remove("hidden");
+    if (!this.title || !this.body || !this.backdrop) {
+      this.init();
+    }
+    if (this.title) this.title.textContent = modalTitle;
+    if (this.body) this.body.innerHTML = contentHtml;
+    if (this.backdrop) this.backdrop.classList.remove("hidden");
   },
 
   close() {
-    this.backdrop.classList.add("hidden");
-    this.body.innerHTML = "";
+    if (this.backdrop) this.backdrop.classList.add("hidden");
+    if (this.body) this.body.innerHTML = "";
   },
 
   showValidationAlert(title, message) {
@@ -39,11 +66,12 @@ const ModalEngine = {
         <button id="btn-modal-alert-ok" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Mengerti</button>
       </div>
     `);
-    document.getElementById("btn-modal-alert-ok").onclick = () => this.close();
+    const btnAlertOk = document.getElementById("btn-modal-alert-ok");
+    if (btnAlertOk) {
+      btnAlertOk.onclick = () => this.close();
+    }
   }
 };
-
-document.getElementById("btn-modal-close").addEventListener("click", () => ModalEngine.close());
 
 /* Escaping String XSS Helper */
 function escapeHTML(str) {
@@ -109,6 +137,112 @@ function createBookmarkCardHTML(item) {
       <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
     </a>
   `;
+}
+
+/* Helper Format Tanggal Lokal YYYY-MM-DD (Aman Lintas Browser & iOS Safari) */
+function getLocalDateString(d = new Date()) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function setSafeDateInputValue(inputElement, date = new Date()) {
+  if (inputElement) {
+    inputElement.value = getLocalDateString(date);
+  }
+}
+
+/* Helper Builder Template Modal Form & Konfirmasi (DRY Architecture) */
+function createModalActionButtonsHTML(submitText = "Simpan Perubahan", cancelText = "Batal") {
+  return `
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">${cancelText}</button>
+      <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">${submitText}</button>
+    </div>
+  `;
+}
+
+function createEditModalFormHTML(formId, fieldsHTML, submitText = "Simpan Perubahan") {
+  return `
+    <form id="${formId}" class="space-y-3">
+      ${fieldsHTML}
+      ${createModalActionButtonsHTML(submitText)}
+    </form>
+  `;
+}
+
+function createConfirmModalHTML(messageHtml, confirmBtnText = "Hapus") {
+  return `
+    <p class="text-xs text-slate-300 leading-relaxed">${messageHtml}</p>
+    <div class="flex justify-end gap-2 pt-2">
+      <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
+      <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white transition-all">${confirmBtnText}</button>
+    </div>
+  `;
+}
+
+function createExpenseEditModalHTML(target) {
+  const categories = ["Makanan & Minuman", "Gaji & Project", "Transportasi", "Hiburan", "Tagihan & Edukasi", "Lain-Lain"];
+  const fieldsHTML = `
+    <div>
+      <label class="block text-xs font-medium text-slate-300 mb-1">Judul / Deskripsi</label>
+      <input type="text" id="edit-expense-judul" value="${escapeHTML(target.judul)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
+      <select id="edit-expense-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+        ${categories.map(cat => 
+          `<option value="${cat}" ${target.kategori === cat ? 'selected' : ''}>${cat}</option>`
+        ).join('')}
+      </select>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1">Jumlah (Rp)</label>
+        <input type="number" id="edit-expense-jumlah" min="1" value="${target.jumlah}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1">Tipe</label>
+        <select id="edit-expense-tipe" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          <option value="Pengeluaran" ${target.tipe === 'Pengeluaran' ? 'selected' : ''}>Pengeluaran</option>
+          <option value="Pemasukan" ${target.tipe === 'Pemasukan' ? 'selected' : ''}>Pemasukan</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-300 mb-1">Tanggal</label>
+      <input type="date" id="edit-expense-tanggal" value="${escapeHTML(target.tanggal)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+    </div>
+  `;
+  return createEditModalFormHTML("form-edit-expense", fieldsHTML);
+}
+
+function createBookmarkEditModalHTML(target) {
+  const categories = ["Pemrograman", "Kuliah & Riset", "Desain & Media", "Produktivitas", "Lainnya"];
+  const fieldsHTML = `
+    <div>
+      <label class="block text-xs font-medium text-slate-300 mb-1">Nama Situs</label>
+      <input type="text" id="edit-bm-nama" value="${escapeHTML(target.nama)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-300 mb-1">URL (http:// atau https://)</label>
+      <input type="url" id="edit-bm-url" value="${escapeHTML(target.url)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
+      <select id="edit-bm-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+        ${categories.map(cat => 
+          `<option value="${cat}" ${target.kategori === cat ? 'selected' : ''}>${cat}</option>`
+        ).join('')}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-300 mb-1">Catatan Singkat</label>
+      <textarea id="edit-bm-catatan" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 resize-none focus:outline-none focus:border-indigo-500">${escapeHTML(target.catatan || '')}</textarea>
+    </div>
+  `;
+  return createEditModalFormHTML("form-edit-bookmark", fieldsHTML);
 }
 
 /* ==========================================================================
@@ -178,7 +312,7 @@ function initExpenseTracker() {
   const filterTipe = document.getElementById("expense-filter-tipe");
   const sortOption = document.getElementById("expense-sort");
 
-  inputTanggal.valueAsDate = new Date();
+  setSafeDateInputValue(inputTanggal);
 
   let transactions = JSON.parse(localStorage.getItem("kopdesfite_expense")) || [];
 
@@ -266,7 +400,7 @@ function initExpenseTracker() {
     saveExpenseData();
     renderExpenseUI();
     form.reset();
-    inputTanggal.valueAsDate = new Date();
+    setSafeDateInputValue(inputTanggal);
   });
 
   containerList.addEventListener("click", (e) => {
@@ -278,13 +412,9 @@ function initExpenseTracker() {
       const target = transactions.find(t => t.id === id);
       if (!target) return;
 
-      ModalEngine.open("Hapus Transaksi", `
-        <p class="text-xs text-slate-300 leading-relaxed">Apakah Anda yakin ingin menghapus catatan "<strong>${escapeHTML(target.judul)}</strong>"?</p>
-        <div class="flex justify-end gap-2 pt-2">
-          <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
-          <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white transition-all">Hapus</button>
-        </div>
-      `);
+      ModalEngine.open("Hapus Transaksi", createConfirmModalHTML(
+        `Apakah Anda yakin ingin menghapus catatan "<strong>${escapeHTML(target.judul)}</strong>"?`
+      ));
 
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
       document.getElementById("btn-confirm-delete").onclick = () => {
@@ -300,43 +430,7 @@ function initExpenseTracker() {
       const target = transactions.find(t => t.id === id);
       if (!target) return;
 
-      ModalEngine.open("Ubah Transaksi", `
-        <form id="form-edit-expense" class="space-y-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Judul / Deskripsi</label>
-            <input type="text" id="edit-expense-judul" value="${escapeHTML(target.judul)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
-            <select id="edit-expense-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-              ${["Makanan & Minuman", "Gaji & Project", "Transportasi", "Hiburan", "Tagihan & Edukasi", "Lain-Lain"].map(cat => 
-                `<option value="${cat}" ${target.kategori === cat ? 'selected' : ''}>${cat}</option>`
-              ).join('')}
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-xs font-medium text-slate-300 mb-1">Jumlah (Rp)</label>
-              <input type="number" id="edit-expense-jumlah" min="1" value="${target.jumlah}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-300 mb-1">Tipe</label>
-              <select id="edit-expense-tipe" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-                <option value="Pengeluaran" ${target.tipe === 'Pengeluaran' ? 'selected' : ''}>Pengeluaran</option>
-                <option value="Pemasukan" ${target.tipe === 'Pemasukan' ? 'selected' : ''}>Pemasukan</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Tanggal</label>
-            <input type="date" id="edit-expense-tanggal" value="${target.tanggal}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
-            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Simpan Perubahan</button>
-          </div>
-        </form>
-      `);
+      ModalEngine.open("Ubah Transaksi", createExpenseEditModalHTML(target));
 
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
       document.getElementById("form-edit-expense").onsubmit = (ev) => {
@@ -462,13 +556,9 @@ function initBookmarkManager() {
       const target = bookmarks.find(b => b.id === id);
       if (!target) return;
 
-      ModalEngine.open("Hapus Bookmark", `
-        <p class="text-xs text-slate-300 leading-relaxed">Hapus tautan "<strong>${escapeHTML(target.nama)}</strong>"?</p>
-        <div class="flex justify-end gap-2 pt-2">
-          <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
-          <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white transition-all">Hapus</button>
-        </div>
-      `);
+      ModalEngine.open("Hapus Bookmark", createConfirmModalHTML(
+        `Hapus tautan "<strong>${escapeHTML(target.nama)}</strong>"?`
+      ));
 
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
       document.getElementById("btn-confirm-delete").onclick = () => {
@@ -484,34 +574,7 @@ function initBookmarkManager() {
       const target = bookmarks.find(b => b.id === id);
       if (!target) return;
 
-      ModalEngine.open("Ubah Bookmark", `
-        <form id="form-edit-bookmark" class="space-y-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Nama Situs</label>
-            <input type="text" id="edit-bm-nama" value="${escapeHTML(target.nama)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">URL (http:// atau https://)</label>
-            <input type="url" id="edit-bm-url" value="${escapeHTML(target.url)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
-            <select id="edit-bm-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-              ${["Pemrograman", "Kuliah & Riset", "Desain & Media", "Produktivitas", "Lainnya"].map(cat => 
-                `<option value="${cat}" ${target.kategori === cat ? 'selected' : ''}>${cat}</option>`
-              ).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Catatan Singkat</label>
-            <textarea id="edit-bm-catatan" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 resize-none focus:outline-none focus:border-indigo-500">${escapeHTML(target.catatan || '')}</textarea>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
-            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Simpan Perubahan</button>
-          </div>
-        </form>
-      `);
+      ModalEngine.open("Ubah Bookmark", createBookmarkEditModalHTML(target));
 
       document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
       document.getElementById("form-edit-bookmark").onsubmit = (ev) => {
