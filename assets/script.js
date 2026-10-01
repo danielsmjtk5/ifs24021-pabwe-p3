@@ -1,1147 +1,860 @@
-/**
- * KopdesFITE - Integrated Application Suite Logic
- * Practical Web Development Assignment - PABWE P3
- */
+'use strict';
 
-document.addEventListener("DOMContentLoaded", () => {
-  ModalEngine.init();
-  initTabSystem();
-  initExpenseTracker();
-  initBookmarkManager();
-  initQuizApp();
-});
+/* ============================================================================
+   LaciKu — assets/script.js
+   Studi kasus PABWE P3
 
-/* ==========================================================================
-   0. HELPER & UTILITY ENGINE
-   ========================================================================== */
+   Struktur file:
+   1. Util bersama (storage helper, format angka, id generator)
+   2. Navigasi tab (state tab disimpan di query string URL, BUKAN localStorage)
+   3. Modul Expense Tracker   (IIFE, key storage sendiri)
+   4. Modul Bookmark Manager  (IIFE, key storage sendiri)
+   5. Modul Quiz App          (IIFE, key storage sendiri)
+   6. Bootstrap aplikasi
+   ============================================================================ */
 
-/* Universal Custom Modal Engine */
-const ModalEngine = {
-  backdrop: null,
-  title: null,
-  body: null,
-  closeBtn: null,
+/* ============================================================================
+   1. UTIL BERSAMA
+   ============================================================================ */
 
-  init() {
-    this.backdrop = document.getElementById("modal-backdrop");
-    this.title = document.getElementById("modal-title");
-    this.body = document.getElementById("modal-body");
-    this.closeBtn = document.getElementById("btn-modal-close");
-
-    if (this.closeBtn) {
-      this.closeBtn.addEventListener("click", () => this.close());
-    }
-
-    if (this.backdrop) {
-      this.backdrop.addEventListener("click", (e) => {
-        if (e.target === this.backdrop) this.close();
-      });
-    }
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && this.backdrop && !this.backdrop.classList.contains("hidden")) {
-        this.close();
-      }
-    });
-  },
-
-  open(modalTitle, contentHtml) {
-    if (!this.title || !this.body || !this.backdrop) {
-      this.init();
-    }
-    if (this.title) this.title.textContent = modalTitle;
-    if (this.body) this.body.innerHTML = contentHtml;
-    if (this.backdrop) this.backdrop.classList.remove("hidden");
-  },
-
-  close() {
-    if (this.backdrop) this.backdrop.classList.add("hidden");
-    if (this.body) this.body.innerHTML = "";
-  },
-
-  showValidationAlert(title, message) {
-    this.open(title, `
-      <p class="text-xs text-slate-300 leading-relaxed">${message}</p>
-      <div class="flex justify-end pt-2">
-        <button id="btn-modal-alert-ok" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Mengerti</button>
-      </div>
-    `);
-    const btnAlertOk = document.getElementById("btn-modal-alert-ok");
-    if (btnAlertOk) {
-      btnAlertOk.onclick = () => this.close();
-    }
-  },
-
-  showFieldErrorsAlert(title, errors) {
-    const errorItemsHTML = errors.map(err => `
-      <li class="flex items-start gap-2 text-rose-300">
-        <i class="fa-solid fa-circle-exclamation mt-0.5 text-rose-400 text-xs flex-shrink-0"></i>
-        <span><strong class="text-slate-200">${escapeHTML(err.label)}:</strong> ${escapeHTML(err.message)}</span>
-      </li>
-    `).join("");
-
-    this.open(title, `
-      <div class="space-y-3">
-        <p class="text-xs text-slate-300 leading-relaxed font-medium">Terdapat data input yang belum sesuai validasi:</p>
-        <ul class="space-y-2 text-xs bg-rose-950/40 border border-rose-900/60 p-3 rounded-xl">
-          ${errorItemsHTML}
-        </ul>
-      </div>
-      <div class="flex justify-end pt-2">
-        <button id="btn-modal-alert-ok" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">Perbaiki Data</button>
-      </div>
-    `);
-    const btnAlertOk = document.getElementById("btn-modal-alert-ok");
-    if (btnAlertOk) {
-      btnAlertOk.onclick = () => this.close();
-    }
-  }
+// Key localStorage dipisah per fitur agar data tidak saling menimpa
+const STORAGE_KEYS = {
+  EXPENSE: 'laciku_expenses_v1',
+  BOOKMARK: 'laciku_bookmarks_v1',
+  QUIZ_HIGHSCORE: 'laciku_quiz_highscore_v1',
 };
 
-/* Escaping String XSS Helper (Aman untuk String, Angka, Tanggal, dll) */
-function escapeHTML(val) {
-  if (val === null || val === undefined) return "";
-  const str = String(val);
-  return str.replace(/[&<>'"]/g, 
-    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-  );
-}
-
-/* Helper HTML Card Generation untuk Menghindari Duplikasi Template (100% Escaped) */
-function createExpenseCardHTML(item, isIncome, formattedAmount) {
-  return `
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-lg flex items-center justify-center ${isIncome ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50' : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'}">
-        <i class="fa-solid ${isIncome ? 'fa-arrow-down' : 'fa-arrow-up'} text-xs"></i>
-      </div>
-      <div>
-        <h4 class="text-xs font-semibold text-slate-200">${escapeHTML(item.judul)}</h4>
-        <div class="flex items-center gap-2 mt-0.5">
-          <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">${escapeHTML(item.kategori)}</span>
-          <span class="text-[10px] text-slate-500">${escapeHTML(item.tanggal)}</span>
-        </div>
-      </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <span class="text-xs font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}">
-        ${isIncome ? '+' : '-'} ${escapeHTML(formattedAmount)}
-      </span>
-      <div class="flex items-center gap-1">
-        <button data-id="${escapeHTML(item.id)}" class="btn-edit-expense p-1 text-slate-400 hover:text-indigo-400 text-xs transition-colors" title="Ubah Transaksi">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        <button data-id="${escapeHTML(item.id)}" class="btn-delete-expense p-1 text-slate-400 hover:text-rose-400 text-xs transition-colors" title="Hapus Transaksi">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-/* DOM Element Card Builder menggunakan createElement & textContent (Mencegah XSS & Konsisten) */
-function createExpenseCardElement(item, isIncome, formattedAmount) {
-  const card = document.createElement("div");
-  card.className = "flex items-center justify-between p-3.5 bg-slate-900/70 rounded-xl border border-slate-700/60 hover:border-slate-600 transition-all";
-
-  // Left Section
-  const leftCol = document.createElement("div");
-  leftCol.className = "flex items-center gap-3";
-
-  const iconBox = document.createElement("div");
-  iconBox.className = `w-9 h-9 rounded-lg flex items-center justify-center ${
-    isIncome ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50' : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'
-  }`;
-  const icon = document.createElement("i");
-  icon.className = `fa-solid ${isIncome ? 'fa-arrow-down' : 'fa-arrow-up'} text-xs`;
-  iconBox.appendChild(icon);
-
-  const textInfo = document.createElement("div");
-  const title = document.createElement("h4");
-  title.className = "text-xs font-semibold text-slate-200";
-  title.textContent = item.judul;
-
-  const metaRow = document.createElement("div");
-  metaRow.className = "flex items-center gap-2 mt-0.5";
-
-  const catBadge = document.createElement("span");
-  catBadge.className = "text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700";
-  catBadge.textContent = item.kategori;
-
-  const dateSpan = document.createElement("span");
-  dateSpan.className = "text-[10px] text-slate-500";
-  dateSpan.textContent = item.tanggal;
-
-  metaRow.appendChild(catBadge);
-  metaRow.appendChild(dateSpan);
-  textInfo.appendChild(title);
-  textInfo.appendChild(metaRow);
-
-  leftCol.appendChild(iconBox);
-  leftCol.appendChild(textInfo);
-
-  // Right Section
-  const rightCol = document.createElement("div");
-  rightCol.className = "flex items-center gap-3";
-
-  const amountSpan = document.createElement("span");
-  amountSpan.className = `text-xs font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`;
-  amountSpan.textContent = `${isIncome ? '+' : '-'} ${formattedAmount}`;
-
-  const actionGroup = document.createElement("div");
-  actionGroup.className = "flex items-center gap-1";
-
-  const editBtn = document.createElement("button");
-  editBtn.className = "btn-edit-expense p-1 text-slate-400 hover:text-indigo-400 text-xs transition-colors";
-  editBtn.setAttribute("data-id", item.id);
-  editBtn.setAttribute("title", "Ubah Transaksi");
-  editBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "btn-delete-expense p-1 text-slate-400 hover:text-rose-400 text-xs transition-colors";
-  deleteBtn.setAttribute("data-id", item.id);
-  deleteBtn.setAttribute("title", "Hapus Transaksi");
-  deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
-
-  actionGroup.appendChild(editBtn);
-  actionGroup.appendChild(deleteBtn);
-  rightCol.appendChild(amountSpan);
-  rightCol.appendChild(actionGroup);
-
-  card.appendChild(leftCol);
-  card.appendChild(rightCol);
-  return card;
-}
-
-/* Helper HTML Card Generation untuk Bookmark (100% Escaped) */
-function createBookmarkCardHTML(item) {
-  return `
-    <div>
-      <div class="flex justify-between items-start gap-2">
-        <span class="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/50">
-          ${escapeHTML(item.kategori)}
-        </span>
-        <div class="flex items-center gap-1">
-          <button data-id="${escapeHTML(item.id)}" class="btn-edit-bookmark text-slate-400 hover:text-indigo-400 text-xs p-1 transition-colors" title="Ubah Bookmark">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button data-id="${escapeHTML(item.id)}" class="btn-delete-bookmark text-slate-400 hover:text-rose-400 text-xs p-1 transition-colors" title="Hapus Bookmark">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      </div>
-      <h4 class="font-bold text-slate-200 mt-2 text-xs line-clamp-1">${escapeHTML(item.nama)}</h4>
-      <p class="text-[11px] text-slate-400 line-clamp-1 mt-0.5">${escapeHTML(item.url)}</p>
-      ${item.catatan ? `<p class="text-[10px] text-slate-500 italic mt-1 line-clamp-2">${escapeHTML(item.catatan)}</p>` : ''}
-    </div>
-    <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 text-xs font-medium text-indigo-400 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 py-1.5 rounded-lg transition-colors w-full">
-      <span>Kunjungi Tautan</span>
-      <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-    </a>
-  `;
-}
-
-/* DOM Element Bookmark Builder menggunakan createElement & textContent (Mencegah XSS & Konsisten) */
-function createBookmarkCardElement(item) {
-  const card = document.createElement("div");
-  card.className = "p-4 bg-slate-900/70 rounded-xl border border-slate-700/60 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3";
-
-  const topSection = document.createElement("div");
-
-  const headerRow = document.createElement("div");
-  headerRow.className = "flex justify-between items-start gap-2";
-
-  const badge = document.createElement("span");
-  badge.className = "text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/50";
-  badge.textContent = item.kategori;
-
-  const actionGroup = document.createElement("div");
-  actionGroup.className = "flex items-center gap-1";
-
-  const editBtn = document.createElement("button");
-  editBtn.className = "btn-edit-bookmark text-slate-400 hover:text-indigo-400 text-xs p-1 transition-colors";
-  editBtn.setAttribute("data-id", item.id);
-  editBtn.setAttribute("title", "Ubah Bookmark");
-  editBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "btn-delete-bookmark text-slate-400 hover:text-rose-400 text-xs p-1 transition-colors";
-  deleteBtn.setAttribute("data-id", item.id);
-  deleteBtn.setAttribute("title", "Hapus Bookmark");
-  deleteBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-
-  actionGroup.appendChild(editBtn);
-  actionGroup.appendChild(deleteBtn);
-  headerRow.appendChild(badge);
-  headerRow.appendChild(actionGroup);
-
-  const title = document.createElement("h4");
-  title.className = "font-bold text-slate-200 mt-2 text-xs line-clamp-1";
-  title.textContent = item.nama;
-
-  const urlDisplay = document.createElement("p");
-  urlDisplay.className = "text-[11px] text-slate-400 line-clamp-1 mt-0.5";
-  urlDisplay.textContent = item.url;
-
-  topSection.appendChild(headerRow);
-  topSection.appendChild(title);
-  topSection.appendChild(urlDisplay);
-
-  if (item.catatan) {
-    const note = document.createElement("p");
-    note.className = "text-[10px] text-slate-500 italic mt-1 line-clamp-2";
-    note.textContent = item.catatan;
-    topSection.appendChild(note);
-  }
-
-  const visitLink = document.createElement("a");
-  visitLink.href = item.url;
-  visitLink.target = "_blank";
-  visitLink.rel = "noopener noreferrer";
-  visitLink.className = "inline-flex items-center justify-center gap-2 text-xs font-medium text-indigo-400 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 py-1.5 rounded-lg transition-colors w-full";
-
-  const linkText = document.createElement("span");
-  linkText.textContent = "Kunjungi Tautan";
-  const linkIcon = document.createElement("i");
-  linkIcon.className = "fa-solid fa-arrow-up-right-from-square text-[10px]";
-  visitLink.appendChild(linkText);
-  visitLink.appendChild(linkIcon);
-
-  card.appendChild(topSection);
-  card.appendChild(visitLink);
-  return card;
-}
-
-/* Helper Format Tanggal Lokal YYYY-MM-DD (Aman Lintas Browser & iOS Safari) */
-function getLocalDateString(d = new Date()) {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function setSafeDateInputValue(inputElement, date = new Date()) {
-  if (inputElement) {
-    inputElement.value = getLocalDateString(date);
+/**
+ * Mengambil data JSON dari localStorage dengan aman.
+ * Mengembalikan fallback jika data tidak ada / rusak.
+ */
+function loadFromStorage(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (err) {
+    console.error(`Gagal memuat data untuk key "${key}":`, err);
+    return fallback;
   }
 }
 
-/* Helper Builder Template Modal Form & Konfirmasi (DRY Architecture) */
-function createModalActionButtonsHTML(submitText = "Simpan Perubahan", cancelText = "Batal") {
-  return `
-    <div class="flex justify-end gap-2 pt-2">
-      <button type="button" id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">${escapeHTML(cancelText)}</button>
-      <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-all">${escapeHTML(submitText)}</button>
-    </div>
-  `;
+/** Menyimpan data ke localStorage dalam bentuk JSON. */
+function saveToStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.error(`Gagal menyimpan data untuk key "${key}":`, err);
+  }
 }
 
-function createEditModalFormHTML(formId, fieldsHTML, submitText = "Simpan Perubahan") {
-  return `
-    <form id="${escapeHTML(formId)}" class="space-y-3">
-      ${fieldsHTML}
-      ${createModalActionButtonsHTML(submitText)}
-    </form>
-  `;
+/** Membuat id unik sederhana berbasis timestamp + random string. */
+function generateId() {
+  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function createConfirmModalHTML(messageHtml, confirmBtnText = "Hapus") {
-  return `
-    <p class="text-xs text-slate-300 leading-relaxed">${messageHtml}</p>
-    <div class="flex justify-end gap-2 pt-2">
-      <button id="btn-cancel-modal" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 transition-all">Batal</button>
-      <button id="btn-confirm-delete" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-medium text-white transition-all">${escapeHTML(confirmBtnText)}</button>
-    </div>
-  `;
+/** Format angka menjadi format Rupiah, contoh: 25000 -> "Rp 25.000". */
+function formatRupiah(value) {
+  const number = Number(value) || 0;
+  return `Rp ${number.toLocaleString('id-ID')}`;
 }
 
-function createExpenseEditModalHTML(target) {
-  const categories = ["Makanan & Minuman", "Gaji & Project", "Transportasi", "Hiburan", "Tagihan & Edukasi", "Lain-Lain"];
-  const fieldsHTML = `
-    <div>
-      <label class="block text-xs font-medium text-slate-300 mb-1">Judul / Deskripsi</label>
-      <input type="text" id="edit-expense-judul" value="${escapeHTML(target.judul)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-    </div>
-    <div>
-      <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
-      <select id="edit-expense-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-        ${categories.map(cat => 
-          `<option value="${escapeHTML(cat)}" ${target.kategori === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`
-        ).join('')}
-      </select>
-    </div>
-    <div class="grid grid-cols-2 gap-2">
-      <div>
-        <label class="block text-xs font-medium text-slate-300 mb-1">Jumlah (Rp)</label>
-        <input type="number" id="edit-expense-jumlah" min="1" value="${escapeHTML(target.jumlah)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-slate-300 mb-1">Tipe</label>
-        <select id="edit-expense-tipe" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-          <option value="Pengeluaran" ${target.tipe === 'Pengeluaran' ? 'selected' : ''}>Pengeluaran</option>
-          <option value="Pemasukan" ${target.tipe === 'Pemasukan' ? 'selected' : ''}>Pemasukan</option>
-        </select>
-      </div>
-    </div>
-    <div>
-      <label class="block text-xs font-medium text-slate-300 mb-1">Tanggal</label>
-      <input type="date" id="edit-expense-tanggal" value="${escapeHTML(target.tanggal)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-    </div>
-  `;
-  return createEditModalFormHTML("form-edit-expense", fieldsHTML);
+/** Escape karakter HTML agar input pengguna aman ditampilkan lewat innerHTML. */
+function escapeHTML(text) {
+  const div = document.createElement('div');
+  div.textContent = String(text ?? '');
+  return div.innerHTML;
 }
 
-function createBookmarkEditModalHTML(target) {
-  const categories = ["Pemrograman", "Kuliah & Riset", "Desain & Media", "Produktivitas", "Lainnya"];
-  const fieldsHTML = `
-    <div>
-      <label class="block text-xs font-medium text-slate-300 mb-1">Nama Situs</label>
-      <input type="text" id="edit-bm-nama" value="${escapeHTML(target.nama)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-    </div>
-    <div>
-      <label class="block text-xs font-medium text-slate-300 mb-1">URL (http:// atau https://)</label>
-      <input type="url" id="edit-bm-url" value="${escapeHTML(target.url)}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-    </div>
-    <div>
-      <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
-      <select id="edit-bm-kategori" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
-        ${categories.map(cat => 
-          `<option value="${escapeHTML(cat)}" ${target.kategori === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`
-        ).join('')}
-      </select>
-    </div>
-    <div>
-      <label class="block text-xs font-medium text-slate-300 mb-1">Catatan Singkat</label>
-      <textarea id="edit-bm-catatan" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 resize-none focus:outline-none focus:border-indigo-500">${escapeHTML(target.catatan || '')}</textarea>
-    </div>
-  `;
-  return createEditModalFormHTML("form-edit-bookmark", fieldsHTML);
+/** Helper generik untuk membuka / menutup modal via class 'is-open'. */
+function openModal(modalId) {
+  document.getElementById(modalId)?.classList.add('is-open');
+}
+function closeModal(modalId) {
+  document.getElementById(modalId)?.classList.remove('is-open');
 }
 
-/* Helper Validasi Per-Field dengan Pesan Spesifik & Feedback Informatif */
-function validateExpenseForm({ judul, kategori, jumlah, tipe, tanggal }) {
-  const errors = [];
-  const validCategories = ["Makanan & Minuman", "Gaji & Project", "Transportasi", "Hiburan", "Tagihan & Edukasi", "Lain-Lain"];
-  const validTypes = ["Pengeluaran", "Pemasukan"];
+// Tombol dengan atribut data-close-modal dipakai di beberapa modal sekaligus
+document.addEventListener('click', (event) => {
+  const closeBtn = event.target.closest('[data-close-modal]');
+  if (closeBtn) {
+    closeModal(closeBtn.dataset.closeModal);
+  }
+  // Klik area gelap di luar kotak modal juga menutup modal
+  if (event.target.classList.contains('modal-overlay')) {
+    event.target.classList.remove('is-open');
+  }
+});
 
-  const trimmedJudul = (judul || "").trim();
-  if (!trimmedJudul) {
-    errors.push({
-      fieldId: "judul",
-      label: "Judul / Deskripsi",
-      message: "Judul transaksi wajib diisi dan tidak boleh hanya berisi spasi."
-    });
-  } else if (trimmedJudul.length < 3) {
-    errors.push({
-      fieldId: "judul",
-      label: "Judul / Deskripsi",
-      message: "Judul transaksi minimal 3 karakter agar informatif."
-    });
+/* ============================================================================
+   2. NAVIGASI TAB — state disimpan & dipulihkan lewat query string URL
+      Contoh: index.html?tab=bookmark
+   ============================================================================ */
+
+const TabNavigation = (() => {
+  const TAB_IDS = ['expense', 'bookmark', 'quiz'];
+  const DEFAULT_TAB = 'expense';
+
+  function getTabFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    return TAB_IDS.includes(tab) ? tab : DEFAULT_TAB;
   }
 
-  if (!kategori || !validCategories.includes(kategori)) {
-    errors.push({
-      fieldId: "kategori",
-      label: "Kategori",
-      message: "Silakan pilih salah satu kategori yang tersedia."
-    });
+  function setTabInURL(tabId) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tabId);
+    window.history.replaceState({}, '', url);
   }
 
-  const numJumlah = Number(jumlah);
-  if (jumlah === "" || jumlah === null || jumlah === undefined || isNaN(numJumlah)) {
-    errors.push({
-      fieldId: "jumlah",
-      label: "Jumlah (Rp)",
-      message: "Nominal transaksi harus diisi dengan angka."
+  function activateTab(tabId) {
+    TAB_IDS.forEach((id) => {
+      const panel = document.getElementById(`panel-${id}`);
+      const button = document.getElementById(`tab-btn-${id}`);
+      const isActive = id === tabId;
+      panel.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-selected', String(isActive));
     });
-  } else if (numJumlah <= 0) {
-    errors.push({
-      fieldId: "jumlah",
-      label: "Jumlah (Rp)",
-      message: "Nominal transaksi harus berupa angka lebih besar dari 0 (Rp)."
-    });
+    setTabInURL(tabId);
   }
 
-  if (!tipe || !validTypes.includes(tipe)) {
-    errors.push({
-      fieldId: "tipe",
-      label: "Tipe Transaksi",
-      message: "Tipe transaksi harus dipilih antara 'Pengeluaran' atau 'Pemasukan'."
+  function init() {
+    TAB_IDS.forEach((id) => {
+      document.getElementById(`tab-btn-${id}`).addEventListener('click', () => activateTab(id));
     });
+    // Pulihkan tab terakhir dari query string saat halaman dimuat / di-refresh
+    activateTab(getTabFromURL());
+
+    // Jika pengguna menekan tombol back/forward browser, ikuti perubahan query
+    window.addEventListener('popstate', () => activateTab(getTabFromURL()));
   }
 
-  const trimmedTanggal = (tanggal || "").trim();
-  if (!trimmedTanggal) {
-    errors.push({
-      fieldId: "tanggal",
-      label: "Tanggal",
-      message: "Tanggal transaksi wajib dipilih."
-    });
-  } else if (isNaN(new Date(trimmedTanggal).getTime())) {
-    errors.push({
-      fieldId: "tanggal",
-      label: "Tanggal",
-      message: "Format tanggal tidak valid (gunakan format YYYY-MM-DD)."
-    });
+  return { init };
+})();
+
+/* ============================================================================
+   3. MODUL EXPENSE TRACKER
+   ============================================================================ */
+
+const ExpenseTracker = (() => {
+  let expenses = loadFromStorage(STORAGE_KEYS.EXPENSE, []);
+  let deleteTargetId = null;
+
+  // --- Referensi DOM ---
+  const form = document.getElementById('expense-form');
+  const titleInput = document.getElementById('expense-title');
+  const categoryInput = document.getElementById('expense-category');
+  const amountInput = document.getElementById('expense-amount');
+  const typeInput = document.getElementById('expense-type');
+  const dateInput = document.getElementById('expense-date');
+
+  const listContainer = document.getElementById('expense-list');
+  const emptyState = document.getElementById('expense-empty');
+
+  const searchInput = document.getElementById('expense-search');
+  const filterTypeSelect = document.getElementById('expense-filter-type');
+  const filterCategorySelect = document.getElementById('expense-filter-category');
+  const sortSelect = document.getElementById('expense-sort');
+
+  const totalIncomeEl = document.getElementById('expense-total-income');
+  const totalExpenseEl = document.getElementById('expense-total-expense');
+  const balanceEl = document.getElementById('expense-balance');
+
+  // Modal ubah
+  const editModalId = 'expense-modal';
+  const editForm = document.getElementById('expense-edit-form');
+  const editIdInput = document.getElementById('expense-edit-id');
+  const editTitleInput = document.getElementById('expense-edit-title');
+  const editCategoryInput = document.getElementById('expense-edit-category');
+  const editAmountInput = document.getElementById('expense-edit-amount');
+  const editTypeInput = document.getElementById('expense-edit-type');
+  const editDateInput = document.getElementById('expense-edit-date');
+
+  // Modal hapus
+  const deleteModalId = 'expense-delete-modal';
+  const deleteConfirmBtn = document.getElementById('expense-delete-confirm-btn');
+
+  function persist() {
+    saveToStorage(STORAGE_KEYS.EXPENSE, expenses);
   }
 
-  return errors;
-}
-
-function validateBookmarkForm({ nama, url, kategori }) {
-  const errors = [];
-  const validCategories = ["Pemrograman", "Kuliah & Riset", "Desain & Media", "Produktivitas", "Lainnya"];
-
-  const trimmedNama = (nama || "").trim();
-  if (!trimmedNama) {
-    errors.push({
-      fieldId: "nama",
-      label: "Nama Situs",
-      message: "Nama situs bookmark wajib diisi dan tidak boleh kosong."
-    });
-  } else if (trimmedNama.length < 2) {
-    errors.push({
-      fieldId: "nama",
-      label: "Nama Situs",
-      message: "Nama situs minimal 2 karakter."
-    });
-  }
-
-  const trimmedUrl = (url || "").trim();
-  if (!trimmedUrl) {
-    errors.push({
-      fieldId: "url",
-      label: "URL Tautan",
-      message: "Alamat URL website wajib diisi."
-    });
-  } else if (!/^https?:\/\/.+/i.test(trimmedUrl)) {
-    errors.push({
-      fieldId: "url",
-      label: "URL Tautan",
-      message: "URL harus diawali dengan protokol valid ('http://' atau 'https://'), contoh: https://del.ac.id"
-    });
-  } else {
-    try {
-      new URL(trimmedUrl);
-    } catch (_) {
-      errors.push({
-        fieldId: "url",
-        label: "URL Tautan",
-        message: "Format struktur alamat URL tidak valid."
-      });
+  /** Validasi form tambah/ubah transaksi. Mengembalikan objek error (kosong = valid). */
+  function validate({ title, amount, date }) {
+    const errors = {};
+    if (!title || !title.trim()) errors.title = 'Judul wajib diisi.';
+    const numericAmount = Number(amount);
+    if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
+      errors.amount = 'Jumlah harus berupa angka lebih dari 0.';
     }
+    if (!date) errors.date = 'Tanggal wajib diisi.';
+    return errors;
   }
 
-  if (!kategori || !validCategories.includes(kategori)) {
-    errors.push({
-      fieldId: "kategori",
-      label: "Kategori",
-      message: "Silakan pilih salah satu kategori bookmark yang tersedia."
+  function showFieldError(errorElId, inputEl, message) {
+    const errorEl = document.getElementById(errorElId);
+    if (errorEl) errorEl.textContent = message || '';
+    if (inputEl) inputEl.classList.toggle('input-error', Boolean(message));
+  }
+
+  function clearFormErrors(prefix) {
+    ['title', 'amount', 'date'].forEach((field) => {
+      showFieldError(`${prefix}-${field}-error`, document.getElementById(`${prefix}-${field}`), '');
     });
   }
 
-  return errors;
-}
+  // --- Tambah transaksi ---
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = {
+      title: titleInput.value,
+      category: categoryInput.value,
+      amount: amountInput.value,
+      type: typeInput.value,
+      date: dateInput.value,
+    };
 
-/* Helper Highlight Border Input ketika Validasi Gagal */
-function applyFieldValidationHighlights(formEl, errors) {
-  if (!formEl) return;
-  const inputs = formEl.querySelectorAll("input, select, textarea");
-  inputs.forEach(input => {
-    input.classList.remove("border-rose-500", "ring-1", "ring-rose-500/50");
-    input.classList.add("border-slate-700");
+    clearFormErrors('expense');
+    const errors = validate(data);
+    if (errors.title) showFieldError('expense-title-error', titleInput, errors.title);
+    if (errors.amount) showFieldError('expense-amount-error', amountInput, errors.amount);
+    if (errors.date) showFieldError('expense-date-error', dateInput, errors.date);
+    if (Object.keys(errors).length > 0) return;
+
+    expenses.push({
+      id: generateId(),
+      title: data.title.trim(),
+      category: data.category,
+      amount: Number(data.amount),
+      type: data.type,
+      date: data.date,
+      createdAt: Date.now(),
+    });
+
+    persist();
+    form.reset();
+    render();
   });
 
-  errors.forEach(err => {
-    const input = formEl.querySelector(`#${err.fieldId}`) || 
-                  formEl.querySelector(`[id$="-${err.fieldId}"]`);
-    if (input) {
-      input.classList.add("border-rose-500", "ring-1", "ring-rose-500/50");
-      input.classList.remove("border-slate-700");
+  // --- Buka modal ubah ---
+  function openEditModal(id) {
+    const item = expenses.find((exp) => exp.id === id);
+    if (!item) return;
+    editIdInput.value = item.id;
+    editTitleInput.value = item.title;
+    editCategoryInput.value = item.category;
+    editAmountInput.value = item.amount;
+    editTypeInput.value = item.type;
+    editDateInput.value = item.date;
+    clearFormErrors('expense-edit');
+    openModal(editModalId);
+  }
+
+  editForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = {
+      title: editTitleInput.value,
+      amount: editAmountInput.value,
+      date: editDateInput.value,
+    };
+
+    clearFormErrors('expense-edit');
+    const errors = validate(data);
+    if (errors.title) showFieldError('expense-edit-title-error', editTitleInput, errors.title);
+    if (errors.amount) showFieldError('expense-edit-amount-error', editAmountInput, errors.amount);
+    if (errors.date) showFieldError('expense-edit-date-error', editDateInput, errors.date);
+    if (Object.keys(errors).length > 0) return;
+
+    const index = expenses.findIndex((exp) => exp.id === editIdInput.value);
+    if (index !== -1) {
+      expenses[index] = {
+        ...expenses[index],
+        title: data.title.trim(),
+        category: editCategoryInput.value,
+        amount: Number(data.amount),
+        type: editTypeInput.value,
+        date: data.date,
+      };
+      persist();
+      render();
     }
+    closeModal(editModalId);
   });
-}
 
-function attachInputClearHighlight(formEl) {
-  if (!formEl) return;
-  const inputs = formEl.querySelectorAll("input, select, textarea");
-  inputs.forEach(input => {
-    input.addEventListener("input", () => {
-      input.classList.remove("border-rose-500", "ring-1", "ring-rose-500/50");
-      input.classList.add("border-slate-700");
-    });
-    input.addEventListener("change", () => {
-      input.classList.remove("border-rose-500", "ring-1", "ring-rose-500/50");
-      input.classList.add("border-slate-700");
-    });
+  // --- Hapus transaksi (via modal konfirmasi) ---
+  function openDeleteModal(id) {
+    deleteTargetId = id;
+    openModal(deleteModalId);
+  }
+
+  deleteConfirmBtn.addEventListener('click', () => {
+    if (deleteTargetId) {
+      expenses = expenses.filter((exp) => exp.id !== deleteTargetId);
+      persist();
+      render();
+    }
+    deleteTargetId = null;
+    closeModal(deleteModalId);
   });
-}
 
-/* ==========================================================================
-   1. NAVIGASI TAB (URL QUERY PARAMETER & HISTORY API)
-   ========================================================================== */
-function initTabSystem() {
-  const tabs = [
-    { key: "expense", btn: document.getElementById("tab-btn-expense"), content: document.getElementById("tab-content-expense") },
-    { key: "bookmark", btn: document.getElementById("tab-btn-bookmark"), content: document.getElementById("tab-content-bookmark") },
-    { key: "quiz", btn: document.getElementById("tab-btn-quiz"), content: document.getElementById("tab-content-quiz") }
-  ];
+  // --- Filter, cari, sort ---
+  function getVisibleExpenses() {
+    const keyword = searchInput.value.trim().toLowerCase();
+    const typeFilter = filterTypeSelect.value;
+    const categoryFilter = filterCategorySelect.value;
+    const sortMode = sortSelect.value;
 
-  const validKeys = tabs.map(t => t.key);
+    let result = expenses.filter((exp) => {
+      const matchesKeyword = !keyword || exp.title.toLowerCase().includes(keyword);
+      const matchesType = typeFilter === 'all' || exp.type === typeFilter;
+      const matchesCategory = categoryFilter === 'all' || exp.category === categoryFilter;
+      return matchesKeyword && matchesType && matchesCategory;
+    });
 
-  function activateTab(tabKey, updateUrl = true) {
-    const activeKey = validKeys.includes(tabKey) ? tabKey : "expense";
-
-    tabs.forEach(tab => {
-      if (tab.key === activeKey) {
-        tab.btn.classList.add("bg-indigo-600", "text-white", "shadow-md");
-        tab.btn.classList.remove("text-slate-400");
-        tab.content.classList.remove("hidden");
-      } else {
-        tab.btn.classList.remove("bg-indigo-600", "text-white", "shadow-md");
-        tab.btn.classList.add("text-slate-400");
-        tab.content.classList.add("hidden");
+    result = result.sort((a, b) => {
+      switch (sortMode) {
+        case 'oldest':
+          return a.createdAt - b.createdAt;
+        case 'amount-desc':
+          return b.amount - a.amount;
+        case 'amount-asc':
+          return a.amount - b.amount;
+        case 'newest':
+        default:
+          return b.createdAt - a.createdAt;
       }
     });
 
-    if (updateUrl) {
-      const url = new URL(window.location);
-      url.searchParams.set("tab", activeKey);
-      window.history.replaceState({}, "", url);
+    return result;
+  }
+
+  function renderSummary() {
+    const totalIncome = expenses
+      .filter((exp) => exp.type === 'pemasukan')
+      .reduce((sum, exp) => sum + exp.amount, 0);
+    const totalExpense = expenses
+      .filter((exp) => exp.type === 'pengeluaran')
+      .reduce((sum, exp) => sum + exp.amount, 0);
+
+    totalIncomeEl.textContent = formatRupiah(totalIncome);
+    totalExpenseEl.textContent = formatRupiah(totalExpense);
+    balanceEl.textContent = formatRupiah(totalIncome - totalExpense);
+  }
+
+  function createExpenseRow(item) {
+    const row = document.createElement('div');
+    row.className = 'row-card p-3 flex flex-wrap items-center justify-between gap-3';
+
+    const isIncome = item.type === 'pemasukan';
+    const badgeClass = isIncome ? 'badge-income' : 'badge-expense';
+    const badgeLabel = isIncome ? 'Pemasukan' : 'Pengeluaran';
+    const amountSign = isIncome ? '+' : '-';
+    const amountColor = isIncome ? 'text-leaf' : 'text-rust';
+
+    row.innerHTML = `
+      <div class="min-w-[10rem]">
+        <p class="font-semibold text-sm">${escapeHTML(item.title)}</p>
+        <div class="flex flex-wrap items-center gap-2 mt-1">
+          <span class="badge ${badgeClass}">${badgeLabel}</span>
+          <span class="badge badge-cat">${escapeHTML(item.category)}</span>
+          <span class="text-xs text-inkmuted">${escapeHTML(item.date)}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <p class="font-display font-semibold ${amountColor}">${amountSign} ${formatRupiah(item.amount)}</p>
+        <div class="flex gap-1">
+          <button type="button" class="btn-edit p-2 rounded hover:bg-[#EDE9DA]" aria-label="Ubah transaksi">
+            <i class="ti ti-pencil" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="btn-delete p-2 rounded hover:bg-[#EDE9DA]" aria-label="Hapus transaksi">
+            <i class="ti ti-trash text-rust" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    row.querySelector('.btn-edit').addEventListener('click', () => openEditModal(item.id));
+    row.querySelector('.btn-delete').addEventListener('click', () => openDeleteModal(item.id));
+    return row;
+  }
+
+  function render() {
+    renderSummary();
+    const visible = getVisibleExpenses();
+
+    listContainer.innerHTML = '';
+    if (visible.length === 0) {
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+      const fragment = document.createDocumentFragment();
+      visible.forEach((item) => fragment.appendChild(createExpenseRow(item)));
+      listContainer.appendChild(fragment);
     }
   }
 
-  tabs.forEach(tab => {
-    tab.btn.addEventListener("click", () => activateTab(tab.key, true));
-  });
-
-  const urlParams = new URLSearchParams(window.location.search);
-  activateTab(urlParams.get("tab"), true);
-
-  window.addEventListener("popstate", () => {
-    const currentParams = new URLSearchParams(window.location.search);
-    activateTab(currentParams.get("tab"), false);
-  });
-}
-
-/* ==========================================================================
-   2. FITUR 3.1: CATATAN PENGELUARAN HARIAN (EXPENSE TRACKER)
-   ========================================================================== */
-function initExpenseTracker() {
-  const form = document.getElementById("form-expense");
-  const inputJudul = document.getElementById("expense-judul");
-  const inputKategori = document.getElementById("expense-kategori");
-  const inputJumlah = document.getElementById("expense-jumlah");
-  const inputTipe = document.getElementById("expense-tipe");
-  const inputTanggal = document.getElementById("expense-tanggal");
-
-  const containerList = document.getElementById("daftar-expense");
-  const elSaldo = document.getElementById("total-saldo");
-  const elPemasukan = document.getElementById("total-pemasukan");
-  const elPengeluaran = document.getElementById("total-pengeluaran");
-
-  const inputSearch = document.getElementById("expense-search");
-  const filterTipe = document.getElementById("expense-filter-tipe");
-  const sortOption = document.getElementById("expense-sort");
-
-  setSafeDateInputValue(inputTanggal);
-  attachInputClearHighlight(form);
-
-  let transactions = JSON.parse(localStorage.getItem("kopdesfite_expense")) || [];
-
-  function saveExpenseData() {
-    localStorage.setItem("kopdesfite_expense", JSON.stringify(transactions));
+  function init() {
+    [searchInput, filterTypeSelect, filterCategorySelect, sortSelect].forEach((el) => {
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
+    });
+    render();
   }
 
-  function formatIDR(amount) {
-    return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
+  return { init };
+})();
+
+/* ============================================================================
+   4. MODUL BOOKMARK MANAGER
+   ============================================================================ */
+
+const BookmarkManager = (() => {
+  let bookmarks = loadFromStorage(STORAGE_KEYS.BOOKMARK, []);
+  let deleteTargetId = null;
+
+  // --- Referensi DOM ---
+  const form = document.getElementById('bookmark-form');
+  const titleInput = document.getElementById('bookmark-title');
+  const urlInput = document.getElementById('bookmark-url');
+  const categoryInput = document.getElementById('bookmark-category');
+  const noteInput = document.getElementById('bookmark-note');
+
+  const listContainer = document.getElementById('bookmark-list');
+  const emptyState = document.getElementById('bookmark-empty');
+
+  const searchInput = document.getElementById('bookmark-search');
+  const sortSelect = document.getElementById('bookmark-sort');
+
+  // Modal ubah
+  const editModalId = 'bookmark-modal';
+  const editForm = document.getElementById('bookmark-edit-form');
+  const editIdInput = document.getElementById('bookmark-edit-id');
+  const editTitleInput = document.getElementById('bookmark-edit-title');
+  const editUrlInput = document.getElementById('bookmark-edit-url');
+  const editCategoryInput = document.getElementById('bookmark-edit-category');
+  const editNoteInput = document.getElementById('bookmark-edit-note');
+
+  // Modal hapus
+  const deleteModalId = 'bookmark-delete-modal';
+  const deleteConfirmBtn = document.getElementById('bookmark-delete-confirm-btn');
+
+  function persist() {
+    saveToStorage(STORAGE_KEYS.BOOKMARK, bookmarks);
   }
 
-  function renderExpenseUI() {
-    // 1. Ringkasan Saldo
-    let totalIn = 0;
-    let totalOut = 0;
-    transactions.forEach(t => {
-      if (t.tipe === "Pemasukan") totalIn += Number(t.jumlah);
-      else totalOut += Number(t.jumlah);
-    });
-
-    elPemasukan.textContent = formatIDR(totalIn);
-    elPengeluaran.textContent = formatIDR(totalOut);
-    elSaldo.textContent = formatIDR(totalIn - totalOut);
-
-    // 2. Filter & Sort
-    let processed = [...transactions];
-    const query = inputSearch.value.trim().toLowerCase();
-    if (query) {
-      processed = processed.filter(t => t.judul.toLowerCase().includes(query));
+  /** Validasi URL sederhana: wajib diawali http:// atau https:// dan punya domain. */
+  function isValidURL(value) {
+    if (!/^https?:\/\/.+/i.test(value.trim())) return false;
+    try {
+      new URL(value.trim());
+      return true;
+    } catch {
+      return false;
     }
+  }
 
-    const tipeVal = filterTipe.value;
-    if (tipeVal !== "SEMUA") {
-      processed = processed.filter(t => t.tipe === tipeVal);
+  function validate({ title, url, category }) {
+    const errors = {};
+    if (!title || !title.trim()) errors.title = 'Nama wajib diisi.';
+    if (!url || !url.trim()) {
+      errors.url = 'URL wajib diisi.';
+    } else if (!isValidURL(url)) {
+      errors.url = 'URL harus diawali http:// atau https://';
     }
+    if (!category || !category.trim()) errors.category = 'Kategori wajib diisi.';
+    return errors;
+  }
 
-    const sortVal = sortOption.value;
-    processed.sort((a, b) => {
-      if (sortVal === "terbaru") return new Date(b.tanggal) - new Date(a.tanggal);
-      if (sortVal === "terlama") return new Date(a.tanggal) - new Date(b.tanggal);
-      if (sortVal === "terbesar") return b.jumlah - a.jumlah;
-      if (sortVal === "terkecil") return a.jumlah - b.jumlah;
-    });
+  function showFieldError(errorElId, inputEl, message) {
+    const errorEl = document.getElementById(errorElId);
+    if (errorEl) errorEl.textContent = message || '';
+    if (inputEl) inputEl.classList.toggle('input-error', Boolean(message));
+  }
 
-    // 3. Render List DOM dengan createElement & textContent (Bebas Risiko XSS)
-    containerList.innerHTML = "";
-
-    if (processed.length === 0) {
-      const emptyDiv = document.createElement("div");
-      emptyDiv.className = "text-center py-10 text-slate-500 text-xs border border-dashed border-slate-700 rounded-xl";
-      emptyDiv.innerHTML = '<i class="fa-solid fa-receipt text-2xl mb-2 block"></i> Belum ada catatan transaksi yang sesuai.';
-      containerList.appendChild(emptyDiv);
-      return;
-    }
-
-    processed.forEach(item => {
-      const isIncome = item.tipe === "Pemasukan";
-      const card = createExpenseCardElement(item, isIncome, formatIDR(item.jumlah));
-      containerList.appendChild(card);
+  function clearFormErrors(prefix) {
+    ['title', 'url', 'category'].forEach((field) => {
+      showFieldError(`${prefix}-${field}-error`, document.getElementById(`${prefix}-${field}`), '');
     });
   }
 
-  // Event Handlers
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const judul = inputJudul.value;
-    const kategori = inputKategori.value;
-    const jumlah = inputJumlah.value;
-    const tipe = inputTipe.value;
-    const tanggal = inputTanggal.value;
+  // --- Tambah bookmark ---
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = {
+      title: titleInput.value,
+      url: urlInput.value,
+      category: categoryInput.value,
+      note: noteInput.value,
+    };
 
-    const validationErrors = validateExpenseForm({ judul, kategori, jumlah, tipe, tanggal });
-    if (validationErrors.length > 0) {
-      applyFieldValidationHighlights(form, validationErrors);
-      ModalEngine.showFieldErrorsAlert("Peringatan Validasi Transaksi", validationErrors);
-      return;
-    }
+    clearFormErrors('bookmark');
+    const errors = validate(data);
+    if (errors.title) showFieldError('bookmark-title-error', titleInput, errors.title);
+    if (errors.url) showFieldError('bookmark-url-error', urlInput, errors.url);
+    if (errors.category) showFieldError('bookmark-category-error', categoryInput, errors.category);
+    if (Object.keys(errors).length > 0) return;
 
-    transactions.push({
-      id: Date.now().toString(),
-      judul: judul.trim(),
-      kategori,
-      jumlah: parseFloat(jumlah),
-      tipe,
-      tanggal
+    bookmarks.push({
+      id: generateId(),
+      title: data.title.trim(),
+      url: data.url.trim(),
+      category: data.category.trim(),
+      note: data.note.trim(),
+      createdAt: Date.now(),
     });
 
-    saveExpenseData();
-    renderExpenseUI();
+    persist();
     form.reset();
-    setSafeDateInputValue(inputTanggal);
+    render();
   });
 
-  containerList.addEventListener("click", (e) => {
-    const editBtn = e.target.closest(".btn-edit-expense");
-    const deleteBtn = e.target.closest(".btn-delete-expense");
-
-    if (deleteBtn) {
-      const id = deleteBtn.getAttribute("data-id");
-      const target = transactions.find(t => t.id === id);
-      if (!target) return;
-
-      ModalEngine.open("Hapus Transaksi", createConfirmModalHTML(
-        `Apakah Anda yakin ingin menghapus catatan "<strong>${escapeHTML(target.judul)}</strong>"?`
-      ));
-
-      document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
-      document.getElementById("btn-confirm-delete").onclick = () => {
-        transactions = transactions.filter(t => t.id !== id);
-        saveExpenseData();
-        renderExpenseUI();
-        ModalEngine.close();
-      };
-    }
-
-    if (editBtn) {
-      const id = editBtn.getAttribute("data-id");
-      const target = transactions.find(t => t.id === id);
-      if (!target) return;
-
-      ModalEngine.open("Ubah Transaksi", createExpenseEditModalHTML(target));
-
-      const editForm = document.getElementById("form-edit-expense");
-      attachInputClearHighlight(editForm);
-      document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
-
-      editForm.onsubmit = (ev) => {
-        ev.preventDefault();
-        const updatedJudul = document.getElementById("edit-expense-judul").value;
-        const updatedKategori = document.getElementById("edit-expense-kategori").value;
-        const updatedJumlah = document.getElementById("edit-expense-jumlah").value;
-        const updatedTipe = document.getElementById("edit-expense-tipe").value;
-        const updatedTanggal = document.getElementById("edit-expense-tanggal").value;
-
-        const validationErrors = validateExpenseForm({
-          judul: updatedJudul,
-          kategori: updatedKategori,
-          jumlah: updatedJumlah,
-          tipe: updatedTipe,
-          tanggal: updatedTanggal
-        });
-
-        if (validationErrors.length > 0) {
-          applyFieldValidationHighlights(editForm, validationErrors);
-          ModalEngine.showFieldErrorsAlert("Peringatan Validasi Ubah Transaksi", validationErrors);
-          return;
-        }
-
-        target.judul = updatedJudul.trim();
-        target.kategori = updatedKategori;
-        target.jumlah = parseFloat(updatedJumlah);
-        target.tipe = updatedTipe;
-        target.tanggal = updatedTanggal;
-
-        saveExpenseData();
-        renderExpenseUI();
-        ModalEngine.close();
-      };
-    }
-  });
-
-  inputSearch.addEventListener("input", renderExpenseUI);
-  filterTipe.addEventListener("change", renderExpenseUI);
-  sortOption.addEventListener("change", renderExpenseUI);
-
-  renderExpenseUI();
-}
-
-/* ==========================================================================
-   3. FITUR 3.2: BOOKMARK / LINK MANAGER
-   ========================================================================== */
-function initBookmarkManager() {
-  const form = document.getElementById("form-bookmark");
-  const inputNama = document.getElementById("bookmark-nama");
-  const inputUrl = document.getElementById("bookmark-url");
-  const inputKategori = document.getElementById("bookmark-kategori");
-  const inputCatatan = document.getElementById("bookmark-catatan");
-
-  const containerList = document.getElementById("daftar-bookmark");
-  const inputSearch = document.getElementById("bookmark-search");
-  const sortOption = document.getElementById("bookmark-sort");
-
-  attachInputClearHighlight(form);
-
-  let bookmarks = JSON.parse(localStorage.getItem("kopdesfite_bookmark")) || [];
-
-  function saveBookmarkData() {
-    localStorage.setItem("kopdesfite_bookmark", JSON.stringify(bookmarks));
+  // --- Buka modal ubah ---
+  function openEditModal(id) {
+    const item = bookmarks.find((bm) => bm.id === id);
+    if (!item) return;
+    editIdInput.value = item.id;
+    editTitleInput.value = item.title;
+    editUrlInput.value = item.url;
+    editCategoryInput.value = item.category;
+    editNoteInput.value = item.note;
+    clearFormErrors('bookmark-edit');
+    openModal(editModalId);
   }
 
-  function renderBookmarkUI() {
-    let processed = [...bookmarks];
+  editForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = {
+      title: editTitleInput.value,
+      url: editUrlInput.value,
+      category: editCategoryInput.value,
+    };
 
-    const query = inputSearch.value.trim().toLowerCase();
-    if (query) {
-      processed = processed.filter(b => 
-        b.nama.toLowerCase().includes(query) || 
-        b.url.toLowerCase().includes(query) ||
-        b.kategori.toLowerCase().includes(query)
+    clearFormErrors('bookmark-edit');
+    const errors = validate(data);
+    if (errors.title) showFieldError('bookmark-edit-title-error', editTitleInput, errors.title);
+    if (errors.url) showFieldError('bookmark-edit-url-error', editUrlInput, errors.url);
+    if (errors.category) showFieldError('bookmark-edit-category-error', editCategoryInput, errors.category);
+    if (Object.keys(errors).length > 0) return;
+
+    const index = bookmarks.findIndex((bm) => bm.id === editIdInput.value);
+    if (index !== -1) {
+      bookmarks[index] = {
+        ...bookmarks[index],
+        title: data.title.trim(),
+        url: data.url.trim(),
+        category: data.category.trim(),
+        note: editNoteInput.value.trim(),
+      };
+      persist();
+      render();
+    }
+    closeModal(editModalId);
+  });
+
+  // --- Hapus bookmark (via modal konfirmasi) ---
+  function openDeleteModal(id) {
+    deleteTargetId = id;
+    openModal(deleteModalId);
+  }
+
+  deleteConfirmBtn.addEventListener('click', () => {
+    if (deleteTargetId) {
+      bookmarks = bookmarks.filter((bm) => bm.id !== deleteTargetId);
+      persist();
+      render();
+    }
+    deleteTargetId = null;
+    closeModal(deleteModalId);
+  });
+
+  // --- Cari & sort ---
+  function getVisibleBookmarks() {
+    const keyword = searchInput.value.trim().toLowerCase();
+    const sortMode = sortSelect.value;
+
+    let result = bookmarks.filter((bm) => {
+      if (!keyword) return true;
+      return (
+        bm.title.toLowerCase().includes(keyword) ||
+        bm.url.toLowerCase().includes(keyword) ||
+        bm.category.toLowerCase().includes(keyword)
       );
-    }
-
-    const sortVal = sortOption.value;
-    processed.sort((a, b) => {
-      if (sortVal === "az") return a.nama.localeCompare(b.nama);
-      if (sortVal === "za") return b.nama.localeCompare(a.nama);
-      return b.timestamp - a.timestamp;
     });
 
-    // Render List DOM dengan createElement & textContent (Bebas Risiko XSS)
-    containerList.innerHTML = "";
-
-    if (processed.length === 0) {
-      const emptyDiv = document.createElement("div");
-      emptyDiv.className = "col-span-full text-center py-10 text-slate-500 text-xs border border-dashed border-slate-700 rounded-xl";
-      emptyDiv.innerHTML = '<i class="fa-solid fa-bookmark text-2xl mb-2 block"></i> Tidak ada tautan tersimpan.';
-      containerList.appendChild(emptyDiv);
-      return;
-    }
-
-    processed.forEach(item => {
-      const card = createBookmarkCardElement(item);
-      containerList.appendChild(card);
+    result = result.sort((a, b) => {
+      switch (sortMode) {
+        case 'title-asc':
+          return a.title.localeCompare(b.title);
+        case 'title-desc':
+          return b.title.localeCompare(a.title);
+        case 'newest':
+        default:
+          return b.createdAt - a.createdAt;
+      }
     });
+
+    return result;
   }
 
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const nama = inputNama.value;
-    const url = inputUrl.value;
-    const kategori = inputKategori.value;
-    const catatan = inputCatatan.value.trim();
+  function createBookmarkRow(item) {
+    const row = document.createElement('div');
+    row.className = 'row-card p-3 flex flex-wrap items-center justify-between gap-3';
 
-    const validationErrors = validateBookmarkForm({ nama, url, kategori });
-    if (validationErrors.length > 0) {
-      applyFieldValidationHighlights(form, validationErrors);
-      ModalEngine.showFieldErrorsAlert("Peringatan Validasi Bookmark", validationErrors);
-      return;
+    row.innerHTML = `
+      <div class="min-w-[12rem]">
+        <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer"
+           class="font-semibold text-sm text-brand hover:underline inline-flex items-center gap-1">
+          ${escapeHTML(item.title)} <i class="ti ti-external-link text-xs" aria-hidden="true"></i>
+        </a>
+        <div class="flex flex-wrap items-center gap-2 mt-1">
+          <span class="badge badge-cat">${escapeHTML(item.category)}</span>
+          <span class="text-xs text-inkmuted truncate max-w-[16rem] inline-block align-middle">${escapeHTML(item.url)}</span>
+        </div>
+        ${item.note ? `<p class="text-xs text-inkmuted mt-1">${escapeHTML(item.note)}</p>` : ''}
+      </div>
+      <div class="flex gap-1">
+        <button type="button" class="btn-edit p-2 rounded hover:bg-[#EDE9DA]" aria-label="Ubah bookmark">
+          <i class="ti ti-pencil" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="btn-delete p-2 rounded hover:bg-[#EDE9DA]" aria-label="Hapus bookmark">
+          <i class="ti ti-trash text-rust" aria-hidden="true"></i>
+        </button>
+      </div>
+    `;
+
+    row.querySelector('.btn-edit').addEventListener('click', () => openEditModal(item.id));
+    row.querySelector('.btn-delete').addEventListener('click', () => openDeleteModal(item.id));
+    return row;
+  }
+
+  function render() {
+    const visible = getVisibleBookmarks();
+
+    listContainer.innerHTML = '';
+    if (visible.length === 0) {
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+      const fragment = document.createDocumentFragment();
+      visible.forEach((item) => fragment.appendChild(createBookmarkRow(item)));
+      listContainer.appendChild(fragment);
     }
+  }
 
-    bookmarks.unshift({
-      id: Date.now().toString(),
-      nama: nama.trim(),
-      url: url.trim(),
-      kategori,
-      catatan,
-      timestamp: Date.now()
+  function init() {
+    [searchInput, sortSelect].forEach((el) => {
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
     });
+    render();
+  }
 
-    saveBookmarkData();
-    renderBookmarkUI();
-    form.reset();
-  });
+  return { init };
+})();
 
-  containerList.addEventListener("click", (e) => {
-    const deleteBtn = e.target.closest(".btn-delete-bookmark");
-    const editBtn = e.target.closest(".btn-edit-bookmark");
+/* ============================================================================
+   5. MODUL QUIZ APP
+   ============================================================================ */
 
-    if (deleteBtn) {
-      const id = deleteBtn.getAttribute("data-id");
-      const target = bookmarks.find(b => b.id === id);
-      if (!target) return;
-
-      ModalEngine.open("Hapus Bookmark", createConfirmModalHTML(
-        `Hapus tautan "<strong>${escapeHTML(target.nama)}</strong>"?`
-      ));
-
-      document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
-      document.getElementById("btn-confirm-delete").onclick = () => {
-        bookmarks = bookmarks.filter(b => b.id !== id);
-        saveBookmarkData();
-        renderBookmarkUI();
-        ModalEngine.close();
-      };
-    }
-
-    if (editBtn) {
-      const id = editBtn.getAttribute("data-id");
-      const target = bookmarks.find(b => b.id === id);
-      if (!target) return;
-
-      ModalEngine.open("Ubah Bookmark", createBookmarkEditModalHTML(target));
-
-      const editForm = document.getElementById("form-edit-bookmark");
-      attachInputClearHighlight(editForm);
-      document.getElementById("btn-cancel-modal").onclick = () => ModalEngine.close();
-
-      editForm.onsubmit = (ev) => {
-        ev.preventDefault();
-        const updatedNama = document.getElementById("edit-bm-nama").value;
-        const updatedUrl = document.getElementById("edit-bm-url").value;
-        const updatedKategori = document.getElementById("edit-bm-kategori").value;
-        const updatedCatatan = document.getElementById("edit-bm-catatan").value.trim();
-
-        const validationErrors = validateBookmarkForm({
-          nama: updatedNama,
-          url: updatedUrl,
-          kategori: updatedKategori
-        });
-
-        if (validationErrors.length > 0) {
-          applyFieldValidationHighlights(editForm, validationErrors);
-          ModalEngine.showFieldErrorsAlert("Peringatan Validasi Ubah Bookmark", validationErrors);
-          return;
-        }
-
-        target.nama = updatedNama.trim();
-        target.url = updatedUrl.trim();
-        target.kategori = updatedKategori;
-        target.catatan = updatedCatatan;
-
-        saveBookmarkData();
-        renderBookmarkUI();
-        ModalEngine.close();
-      };
-    }
-  });
-
-  inputSearch.addEventListener("input", renderBookmarkUI);
-  sortOption.addEventListener("change", renderBookmarkUI);
-
-  renderBookmarkUI();
-}
-
-/* ==========================================================================
-   4. FITUR 3.3: KUIS INTERAKTIF (QUIZ APP)
-   ========================================================================== */
-function initQuizApp() {
-  const quizData = [
+const QuizApp = (() => {
+  // Soal disimpan sebagai array of object (bukan hardcode HTML per soal)
+  const QUESTIONS = [
     {
-      pertanyaan: "Elemen HTML5 semantik mana yang paling tepat untuk membungkus navigasi utama web?",
-      opsi: ["<section>", "<nav>", "<header>", "<aside>"],
-      jawaban: 1
+      question: 'Tag HTML apa yang digunakan untuk membuat tautan (link)?',
+      options: ['<link>', '<a>', '<href>', '<nav>'],
+      answerIndex: 1,
     },
     {
-      pertanyaan: "Method JavaScript yang digunakan untuk mengonversi string JSON menjadi objek JavaScript adalah:",
-      opsi: ["JSON.stringify()", "JSON.parse()", "JSON.toObject()", "JSON.convert()"],
-      jawaban: 1
+      question: 'Properti CSS apa yang digunakan untuk mengubah warna teks?',
+      options: ['background-color', 'text-align', 'color', 'font-style'],
+      answerIndex: 2,
     },
     {
-      pertanyaan: "Di manakah lokasi penyimpanan persistent data `localStorage` berada?",
-      opsi: ["Temporary Session RAM", "Client-side Web Browser", "Remote Database Server", "HTTP Cookies"],
-      jawaban: 1
+      question: 'Fungsi JavaScript apa yang digunakan untuk mengubah string JSON menjadi objek?',
+      options: ['JSON.stringify()', 'JSON.parse()', 'JSON.toObject()', 'Object.parse()'],
+      answerIndex: 1,
     },
     {
-      pertanyaan: "Bagaimana cara mendeteksi event klik pada sebuah tombol via Vanilla JS tanpa inline HTML?",
-      opsi: ["button.onclick()", "button.addEventListener('click', fn)", "button.setEvent('click')", "button.attachClick()"],
-      jawaban: 1
+      question: 'Metode array JavaScript apa yang digunakan untuk menyaring elemen sesuai kondisi tertentu?',
+      options: ['map()', 'reduce()', 'filter()', 'sort()'],
+      answerIndex: 2,
     },
     {
-      pertanyaan: "Metode array JS mana yang menghasilkan array baru berdasarkan transformasi setiap elemen?",
-      opsi: ["forEach()", "filter()", "map()", "reduce()"],
-      jawaban: 2
-    }
+      question: 'Media penyimpanan browser apa yang datanya tetap ada meski browser ditutup dan dibuka lagi?',
+      options: ['sessionStorage', 'cookie session', 'localStorage', 'variabel global'],
+      answerIndex: 2,
+    },
+    {
+      question: 'Selector JavaScript mana yang mengembalikan elemen pertama yang cocok dengan sebuah CSS selector?',
+      options: ['document.querySelectorAll()', 'document.getElementsByClassName()', 'document.querySelector()', 'document.getAll()'],
+      answerIndex: 2,
+    },
   ];
 
-  const screenStart = document.getElementById("quiz-screen-start");
-  const screenRunning = document.getElementById("quiz-screen-running");
-  const screenResult = document.getElementById("quiz-screen-result");
-
-  const btnStart = document.getElementById("btn-quiz-start");
-  const btnRestart = document.getElementById("btn-quiz-restart");
-  const btnNext = document.getElementById("btn-quiz-next");
-
-  const elProgress = document.getElementById("quiz-progress-text");
-  const elTimer = document.getElementById("quiz-timer-text");
-  const elQuestion = document.getElementById("quiz-question-text");
-  const elOptions = document.getElementById("quiz-options-container");
-  const elFeedback = document.getElementById("quiz-feedback");
-
-  const elHighScoreVal = document.getElementById("quiz-high-score-val");
-  const elFinalScore = document.getElementById("quiz-final-score");
-  const elNewRecord = document.getElementById("quiz-new-record");
+  const TOTAL_QUESTIONS = QUESTIONS.length;
 
   let currentIndex = 0;
   let score = 0;
-  let timerInterval = null;
-  let timeLeft = 15;
-  let selectedOptionIndex = null;
+  let hasAnsweredCurrent = false;
 
-  let highScore = parseInt(localStorage.getItem("kopdesfite_quiz_highscore") || "0", 10);
-  elHighScoreVal.textContent = highScore;
+  // --- Referensi DOM ---
+  const startScreen = document.getElementById('quiz-start-screen');
+  const questionScreen = document.getElementById('quiz-question-screen');
+  const resultScreen = document.getElementById('quiz-result-screen');
+
+  const startBtn = document.getElementById('quiz-start-btn');
+  const restartBtn = document.getElementById('quiz-restart-btn');
+  const nextBtn = document.getElementById('quiz-next-btn');
+
+  const currentNumberEl = document.getElementById('quiz-current-number');
+  const totalNumberEl = document.getElementById('quiz-total-number');
+  const currentScoreEl = document.getElementById('quiz-current-score');
+  const progressBar = document.getElementById('quiz-progress-bar');
+  const questionTextEl = document.getElementById('quiz-question-text');
+  const optionsContainer = document.getElementById('quiz-options');
+  const feedbackEl = document.getElementById('quiz-feedback');
+
+  const finalScoreEl = document.getElementById('quiz-final-score');
+  const finalTotalEl = document.getElementById('quiz-final-total');
+  const resultMessageEl = document.getElementById('quiz-result-message');
+
+  const highscoreEl = document.getElementById('quiz-highscore');
+  const highscoreTotalEl = document.getElementById('quiz-highscore-total');
+
+  function showScreen(screen) {
+    [startScreen, questionScreen, resultScreen].forEach((el) => el.classList.add('hidden'));
+    screen.classList.remove('hidden');
+  }
+
+  function getHighScore() {
+    return loadFromStorage(STORAGE_KEYS.QUIZ_HIGHSCORE, 0);
+  }
+
+  function updateHighScoreDisplay() {
+    highscoreEl.textContent = getHighScore();
+    highscoreTotalEl.textContent = TOTAL_QUESTIONS;
+  }
+
+  function maybeSaveHighScore(finalScore) {
+    const currentHigh = getHighScore();
+    if (finalScore > currentHigh) {
+      saveToStorage(STORAGE_KEYS.QUIZ_HIGHSCORE, finalScore);
+    }
+  }
 
   function startQuiz() {
     currentIndex = 0;
     score = 0;
-    screenStart.classList.add("hidden");
-    screenResult.classList.add("hidden");
-    screenRunning.classList.remove("hidden");
-    loadQuestion();
+    hasAnsweredCurrent = false;
+    totalNumberEl.textContent = TOTAL_QUESTIONS;
+    showScreen(questionScreen);
+    renderQuestion();
   }
 
-  function loadQuestion() {
-    clearInterval(timerInterval);
-    timeLeft = 15;
-    selectedOptionIndex = null;
+  function renderQuestion() {
+    hasAnsweredCurrent = false;
+    const item = QUESTIONS[currentIndex];
 
-    btnNext.classList.add("hidden");
-    elFeedback.classList.add("hidden");
-    updateTimerUI();
+    currentNumberEl.textContent = currentIndex + 1;
+    currentScoreEl.textContent = score;
+    progressBar.style.width = `${(currentIndex / TOTAL_QUESTIONS) * 100}%`;
+    questionTextEl.textContent = item.question;
+    feedbackEl.textContent = '';
+    nextBtn.classList.add('hidden');
 
-    const q = quizData[currentIndex];
-    elProgress.textContent = `Soal ${currentIndex + 1} dari ${quizData.length}`;
-    elQuestion.textContent = q.pertanyaan;
+    optionsContainer.innerHTML = '';
+    item.options.forEach((optionText, optionIndex) => {
+      const optionEl = document.createElement('button');
+      optionEl.type = 'button';
+      optionEl.className = 'quiz-option w-full text-left';
+      optionEl.textContent = optionText;
+      optionEl.addEventListener('click', () => handleAnswer(optionIndex, optionEl));
+      optionsContainer.appendChild(optionEl);
+    });
+  }
 
-    elOptions.innerHTML = "";
-    q.opsi.forEach((opsiText, i) => {
-      const btn = document.createElement("button");
-      btn.className = "w-full text-left p-3.5 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-indigo-950/50 hover:border-indigo-500/50 text-xs font-medium text-slate-200 transition-all flex items-center gap-3 option-btn";
-      
-      const badge = document.createElement("span");
-      badge.className = "w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400 border border-slate-700 flex-shrink-0";
-      badge.textContent = String.fromCharCode(65 + i);
+  function handleAnswer(selectedIndex, selectedEl) {
+    if (hasAnsweredCurrent) return; // cegah jawab dua kali untuk soal yang sama
+    hasAnsweredCurrent = true;
 
-      const label = document.createElement("span");
-      label.className = "flex-grow";
-      label.textContent = opsiText;
+    const item = QUESTIONS[currentIndex];
+    const isCorrect = selectedIndex === item.answerIndex;
 
-      btn.appendChild(badge);
-      btn.appendChild(label);
-      btn.onclick = () => selectOption(i);
-      elOptions.appendChild(btn);
+    // Tandai seluruh opsi: kunci jawaban selalu ditandai hijau, pilihan salah ditandai merah
+    Array.from(optionsContainer.children).forEach((optionEl, index) => {
+      optionEl.classList.add('is-disabled');
+      if (index === item.answerIndex) {
+        optionEl.classList.add('is-correct');
+      } else if (index === selectedIndex) {
+        optionEl.classList.add('is-wrong');
+      }
     });
 
-    timerInterval = setInterval(() => {
-      timeLeft--;
-      updateTimerUI();
-      if (timeLeft <= 0) {
-        clearInterval(timerInterval);
-        showFeedback(null, true);
-      }
-    }, 1000);
-  }
-
-  function updateTimerUI() {
-    elTimer.textContent = `Waktu: ${timeLeft}s`;
-  }
-
-  function selectOption(index) {
-    if (selectedOptionIndex !== null) return;
-    clearInterval(timerInterval);
-    selectedOptionIndex = index;
-    showFeedback(index, false);
-  }
-
-  function showFeedback(selectedIndex, isTimeout) {
-    const q = quizData[currentIndex];
-    const optionBtns = elOptions.querySelectorAll(".option-btn");
-    const pointsPerQuestion = Math.round(100 / quizData.length);
-
-    optionBtns.forEach(btn => btn.disabled = true);
-
-    if (isTimeout) {
-      elFeedback.className = "p-3 rounded-xl text-xs font-medium transition-all text-center bg-rose-950/80 border border-rose-800 text-rose-300 block";
-      elFeedback.innerHTML = `<i class="fa-solid fa-clock"></i> Waktu Habis! Jawaban benar: <strong>${escapeHTML(q.opsi[q.jawaban])}</strong>`;
-      optionBtns[q.jawaban].classList.add("bg-emerald-950/80", "border-emerald-500");
-    } else if (selectedIndex === q.jawaban) {
-      score += (100 / quizData.length);
-      elFeedback.className = "p-3 rounded-xl text-xs font-medium transition-all text-center bg-emerald-950/80 border border-emerald-800 text-emerald-300 block";
-      elFeedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> Jawaban Tepat! (+${pointsPerQuestion} poin)`;
-      optionBtns[selectedIndex].classList.add("bg-emerald-950/80", "border-emerald-500");
+    if (isCorrect) {
+      score += 1;
+      feedbackEl.textContent = 'Benar!';
+      feedbackEl.className = 'text-sm font-semibold mb-4 min-h-[1.25rem] text-leaf';
     } else {
-      elFeedback.className = "p-3 rounded-xl text-xs font-medium transition-all text-center bg-rose-950/80 border border-rose-800 text-rose-300 block";
-      elFeedback.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Jawaban Salah! Jawaban benar: <strong>${escapeHTML(q.opsi[q.jawaban])}</strong>`;
-      optionBtns[selectedIndex].classList.add("bg-rose-950/80", "border-rose-500");
-      optionBtns[q.jawaban].classList.add("bg-emerald-950/80", "border-emerald-500");
+      feedbackEl.textContent = `Kurang tepat. Jawaban yang benar: ${item.options[item.answerIndex]}`;
+      feedbackEl.className = 'text-sm font-semibold mb-4 min-h-[1.25rem] text-rust';
     }
 
-    btnNext.classList.remove("hidden");
+    currentScoreEl.textContent = score;
+    progressBar.style.width = `${((currentIndex + 1) / TOTAL_QUESTIONS) * 100}%`;
+
+    const isLastQuestion = currentIndex === TOTAL_QUESTIONS - 1;
+    nextBtn.textContent = '';
+    nextBtn.innerHTML = isLastQuestion
+      ? 'Lihat Hasil <i class="ti ti-flag" aria-hidden="true"></i>'
+      : 'Soal Berikutnya <i class="ti ti-arrow-right" aria-hidden="true"></i>';
+    nextBtn.classList.remove('hidden');
   }
 
-  btnNext.onclick = () => {
-    currentIndex++;
-    if (currentIndex < quizData.length) {
-      loadQuestion();
-    } else {
+  function goToNext() {
+    const isLastQuestion = currentIndex === TOTAL_QUESTIONS - 1;
+    if (isLastQuestion) {
       finishQuiz();
+    } else {
+      currentIndex += 1;
+      renderQuestion();
     }
-  };
+  }
 
   function finishQuiz() {
-    screenRunning.classList.add("hidden");
-    screenResult.classList.remove("hidden");
+    maybeSaveHighScore(score);
+    updateHighScoreDisplay();
 
-    const finalScore = Math.round(score);
-    elFinalScore.textContent = `${finalScore} / 100`;
+    finalScoreEl.textContent = score;
+    finalTotalEl.textContent = TOTAL_QUESTIONS;
 
-    if (finalScore > highScore) {
-      highScore = finalScore;
-      localStorage.setItem("kopdesfite_quiz_highscore", highScore.toString());
-      elHighScoreVal.textContent = highScore;
-      elNewRecord.classList.remove("hidden");
+    const ratio = score / TOTAL_QUESTIONS;
+    if (ratio === 1) {
+      resultMessageEl.textContent = 'Sempurna! Semua jawaban benar.';
+    } else if (ratio >= 0.6) {
+      resultMessageEl.textContent = 'Bagus! Pemahamanmu sudah cukup solid.';
     } else {
-      elNewRecord.classList.add("hidden");
+      resultMessageEl.textContent = 'Jangan menyerah, coba lagi untuk hasil lebih baik.';
     }
+
+    showScreen(resultScreen);
   }
 
-  btnStart.onclick = startQuiz;
-  btnRestart.onclick = startQuiz;
-}
+  function init() {
+    updateHighScoreDisplay();
+    startBtn.addEventListener('click', startQuiz);
+    restartBtn.addEventListener('click', startQuiz);
+    nextBtn.addEventListener('click', goToNext);
+    showScreen(startScreen);
+  }
+
+  return { init };
+})();
+
+/* ============================================================================
+   6. BOOTSTRAP APLIKASI
+   ============================================================================ */
+
+document.addEventListener('DOMContentLoaded', () => {
+  TabNavigation.init();
+  ExpenseTracker.init();
+  BookmarkManager.init();
+  QuizApp.init();
+});
