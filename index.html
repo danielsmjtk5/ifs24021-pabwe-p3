@@ -1,586 +1,1483 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="LaciKu — catatan pengeluaran harian, bookmark tautan favorit, dan kuis interaktif dalam satu halaman." />
-<title>LaciKu — Catatan, Tautan &amp; Kuis</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="KopdesFITE - Catatan keuangan, bookmark, dan kuis dalam satu halaman" />
+  <title>KopdesFITE</title>
 
-<!-- Google Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- CSS Tailwind hasil build (hanya class yang dipakai), di-inline agar tidak memblokir render -->
+  <style>
+    *,
+    :after,
+    :before {
+      --tw-border-spacing-x: 0;
+      --tw-border-spacing-y: 0;
+      --tw-translate-x: 0;
+      --tw-translate-y: 0;
+      --tw-rotate: 0;
+      --tw-skew-x: 0;
+      --tw-skew-y: 0;
+      --tw-scale-x: 1;
+      --tw-scale-y: 1;
+      --tw-pan-x: ;
+      --tw-pan-y: ;
+      --tw-pinch-zoom: ;
+      --tw-scroll-snap-strictness: proximity;
+      --tw-gradient-from-position: ;
+      --tw-gradient-via-position: ;
+      --tw-gradient-to-position: ;
+      --tw-ordinal: ;
+      --tw-slashed-zero: ;
+      --tw-numeric-figure: ;
+      --tw-numeric-spacing: ;
+      --tw-numeric-fraction: ;
+      --tw-ring-inset: ;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-color: rgba(59, 130, 246, .5);
+      --tw-ring-offset-shadow: 0 0 #0000;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-colored: 0 0 #0000;
+      --tw-blur: ;
+      --tw-brightness: ;
+      --tw-contrast: ;
+      --tw-grayscale: ;
+      --tw-hue-rotate: ;
+      --tw-invert: ;
+      --tw-saturate: ;
+      --tw-sepia: ;
+      --tw-drop-shadow: ;
+      --tw-backdrop-blur: ;
+      --tw-backdrop-brightness: ;
+      --tw-backdrop-contrast: ;
+      --tw-backdrop-grayscale: ;
+      --tw-backdrop-hue-rotate: ;
+      --tw-backdrop-invert: ;
+      --tw-backdrop-opacity: ;
+      --tw-backdrop-saturate: ;
+      --tw-backdrop-sepia: ;
+      --tw-contain-size: ;
+      --tw-contain-layout: ;
+      --tw-contain-paint: ;
+      --tw-contain-style:
+    }
 
-<!-- Tabler Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" />
+    ::backdrop {
+      --tw-border-spacing-x: 0;
+      --tw-border-spacing-y: 0;
+      --tw-translate-x: 0;
+      --tw-translate-y: 0;
+      --tw-rotate: 0;
+      --tw-skew-x: 0;
+      --tw-skew-y: 0;
+      --tw-scale-x: 1;
+      --tw-scale-y: 1;
+      --tw-pan-x: ;
+      --tw-pan-y: ;
+      --tw-pinch-zoom: ;
+      --tw-scroll-snap-strictness: proximity;
+      --tw-gradient-from-position: ;
+      --tw-gradient-via-position: ;
+      --tw-gradient-to-position: ;
+      --tw-ordinal: ;
+      --tw-slashed-zero: ;
+      --tw-numeric-figure: ;
+      --tw-numeric-spacing: ;
+      --tw-numeric-fraction: ;
+      --tw-ring-inset: ;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-color: rgba(59, 130, 246, .5);
+      --tw-ring-offset-shadow: 0 0 #0000;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-colored: 0 0 #0000;
+      --tw-blur: ;
+      --tw-brightness: ;
+      --tw-contrast: ;
+      --tw-grayscale: ;
+      --tw-hue-rotate: ;
+      --tw-invert: ;
+      --tw-saturate: ;
+      --tw-sepia: ;
+      --tw-drop-shadow: ;
+      --tw-backdrop-blur: ;
+      --tw-backdrop-brightness: ;
+      --tw-backdrop-contrast: ;
+      --tw-backdrop-grayscale: ;
+      --tw-backdrop-hue-rotate: ;
+      --tw-backdrop-invert: ;
+      --tw-backdrop-opacity: ;
+      --tw-backdrop-saturate: ;
+      --tw-backdrop-sepia: ;
+      --tw-contain-size: ;
+      --tw-contain-layout: ;
+      --tw-contain-paint: ;
+      --tw-contain-style:
+    }
 
-<!-- Tailwind CSS (CDN) -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          paper: '#F2EEDD',
-          surface: '#FFFDF7',
-          ink: '#2B2620',
-          inkmuted: '#6B6355',
-          brand: {
-            DEFAULT: '#2F4858',
-            dark: '#1D2E38',
-            light: '#4A6A7C',
-          },
-          gold: '#C98A2C',
-          leaf: '#3F6B4A',
-          rust: '#B0483C',
-        },
-        fontFamily: {
-          display: ['Fraunces', 'serif'],
-          body: ['Work Sans', 'sans-serif'],
-        },
-      },
-    },
-  };
-</script>
+    /*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/
+    *,
+    :after,
+    :before {
+      box-sizing: border-box;
+      border: 0 solid #e5e7eb
+    }
 
-<style>
-  :root { color-scheme: light; }
-  body { background-color: #F2EEDD; }
+    :after,
+    :before {
+      --tw-content: ""
+    }
 
-  /* --- Folder-tab navigation --- */
-  .tab-btn {
-    clip-path: polygon(6% 0%, 94% 0%, 100% 100%, 0% 100%);
-    transition: transform .15s ease, background-color .15s ease;
-  }
-  .tab-btn[aria-selected="true"] {
-    background-color: #FFFDF7;
-    color: #2B2620;
-    transform: translateY(-2px);
-  }
-  .tab-btn[aria-selected="false"] {
-    background-color: #E4DEC8;
-    color: #4F4A3F; /* contrast ~6.5:1 (WCAG AA) */
-  }
-  .tab-btn[aria-selected="false"]:hover {
-    background-color: #DAD3B9;
-    color: #2B2620;
-  }
+    :host,
+    html {
+      line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
+      -moz-tab-size: 4;
+      -o-tab-size: 4;
+      tab-size: 4;
+      font-family: ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+      font-feature-settings: normal;
+      font-variation-settings: normal;
+      -webkit-tap-highlight-color: transparent
+    }
 
-  .panel { display: none; }
-  .panel.is-active { display: block; }
+    body {
+      margin: 0;
+      line-height: inherit
+    }
 
-  .field-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #6B6355;
-  }
+    hr {
+      height: 0;
+      color: inherit;
+      border-top-width: 1px
+    }
 
-  .input-base {
-    background-color: #FFFDF7;
-    border: 1px solid #D9D2BC;
-    border-radius: 0.375rem;
-    padding: 0.55rem 0.75rem;
-    width: 100%;
-    font-size: 0.9rem;
-    color: #2B2620;
-  }
-  .input-base:focus {
-    outline: 2px solid #2F4858;
-    outline-offset: 1px;
-    border-color: #2F4858;
-  }
-  .input-base.input-error {
-    border-color: #B0483C;
-  }
-  .error-text {
-    color: #B0483C;
-    font-size: 0.75rem;
-    margin-top: 0.15rem;
-    min-height: 1rem;
-  }
+    abbr:where([title]) {
+      -webkit-text-decoration: underline dotted;
+      text-decoration: underline dotted
+    }
 
-  .btn {
-    font-weight: 600;
-    font-size: 0.875rem;
-    padding: 0.55rem 1.1rem;
-    border-radius: 0.375rem;
-    transition: filter .15s ease;
-  }
-  .btn:hover { filter: brightness(1.08); }
-  .btn-primary { background-color: #2F4858; color: #FFFDF7; }
-  .btn-ghost { background-color: transparent; color: #2F4858; border: 1px solid #2F4858; }
-  .btn-danger { background-color: #B0483C; color: #FFFDF7; }
-  .btn-gold { background-color: #C98A2C; color: #FFFDF7; }
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      font-size: inherit;
+      font-weight: inherit
+    }
 
-  .row-card {
-    background-color: #FFFDF7;
-    border: 1px solid #E4DEC8;
-    border-radius: 0.5rem;
-  }
+    a {
+      color: inherit;
+      text-decoration: inherit
+    }
 
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.55rem;
-    border-radius: 999px;
-  }
-  .badge-income { background-color: #E4EEE5; color: #3F6B4A; }
-  .badge-expense { background-color: #F5E4E1; color: #B0483C; }
-  .badge-cat { background-color: #EDE9DA; color: #6B6355; }
+    b,
+    strong {
+      font-weight: bolder
+    }
 
-  .modal-overlay {
-    position: fixed; inset: 0;
-    background-color: rgba(43, 38, 32, 0.55);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    z-index: 50;
-  }
-  .modal-overlay.is-open { display: flex; }
+    code,
+    kbd,
+    pre,
+    samp {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+      font-feature-settings: normal;
+      font-variation-settings: normal;
+      font-size: 1em
+    }
 
-  .modal-box {
-    background-color: #FFFDF7;
-    border-radius: 0.6rem;
-    width: 100%;
-    max-width: 28rem;
-    padding: 1.5rem;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
+    small {
+      font-size: 80%
+    }
 
-  .quiz-option {
-    background-color: #FFFDF7;
-    border: 1px solid #D9D2BC;
-    border-radius: 0.5rem;
-    padding: 0.85rem 1rem;
-    cursor: pointer;
-    transition: border-color .15s ease, background-color .15s ease;
-  }
-  .quiz-option:hover { border-color: #2F4858; }
-  .quiz-option.is-correct { background-color: #E4EEE5; border-color: #3F6B4A; }
-  .quiz-option.is-wrong { background-color: #F5E4E1; border-color: #B0483C; }
-  .quiz-option.is-disabled { pointer-events: none; opacity: 0.85; }
+    sub,
+    sup {
+      font-size: 75%;
+      line-height: 0;
+      position: relative;
+      vertical-align: baseline
+    }
 
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-thumb { background-color: #D9D2BC; border-radius: 4px; }
-</style>
+    sub {
+      bottom: -.25em
+    }
+
+    sup {
+      top: -.5em
+    }
+
+    table {
+      text-indent: 0;
+      border-color: inherit;
+      border-collapse: collapse
+    }
+
+    button,
+    input,
+    optgroup,
+    select,
+    textarea {
+      font-family: inherit;
+      font-feature-settings: inherit;
+      font-variation-settings: inherit;
+      font-size: 100%;
+      font-weight: inherit;
+      line-height: inherit;
+      letter-spacing: inherit;
+      color: inherit;
+      margin: 0;
+      padding: 0
+    }
+
+    button,
+    select {
+      text-transform: none
+    }
+
+    button,
+    input:where([type=button]),
+    input:where([type=reset]),
+    input:where([type=submit]) {
+      -webkit-appearance: button;
+      background-color: transparent;
+      background-image: none
+    }
+
+    :-moz-focusring {
+      outline: auto
+    }
+
+    :-moz-ui-invalid {
+      box-shadow: none
+    }
+
+    progress {
+      vertical-align: baseline
+    }
+
+    ::-webkit-inner-spin-button,
+    ::-webkit-outer-spin-button {
+      height: auto
+    }
+
+    [type=search] {
+      -webkit-appearance: textfield;
+      outline-offset: -2px
+    }
+
+    ::-webkit-search-decoration {
+      -webkit-appearance: none
+    }
+
+    ::-webkit-file-upload-button {
+      -webkit-appearance: button;
+      font: inherit
+    }
+
+    summary {
+      display: list-item
+    }
+
+    blockquote,
+    dd,
+    dl,
+    figure,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    hr,
+    p,
+    pre {
+      margin: 0
+    }
+
+    fieldset {
+      margin: 0
+    }
+
+    fieldset,
+    legend {
+      padding: 0
+    }
+
+    menu,
+    ol,
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0
+    }
+
+    dialog {
+      padding: 0
+    }
+
+    textarea {
+      resize: vertical
+    }
+
+    input::-moz-placeholder,
+    textarea::-moz-placeholder {
+      opacity: 1;
+      color: #9ca3af
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      opacity: 1;
+      color: #9ca3af
+    }
+
+    [role=button],
+    button {
+      cursor: pointer
+    }
+
+    :disabled {
+      cursor: default
+    }
+
+    audio,
+    canvas,
+    embed,
+    iframe,
+    img,
+    object,
+    svg,
+    video {
+      display: block;
+      vertical-align: middle
+    }
+
+    img,
+    video {
+      max-width: 100%;
+      height: auto
+    }
+
+    [hidden]:where(:not([hidden=until-found])) {
+      display: none
+    }
+
+    .container {
+      width: 100%
+    }
+
+    @media (min-width:640px) {
+      .container {
+        max-width: 640px
+      }
+    }
+
+    @media (min-width:768px) {
+      .container {
+        max-width: 768px
+      }
+    }
+
+    @media (min-width:1024px) {
+      .container {
+        max-width: 1024px
+      }
+    }
+
+    @media (min-width:1280px) {
+      .container {
+        max-width: 1280px
+      }
+    }
+
+    @media (min-width:1536px) {
+      .container {
+        max-width: 1536px
+      }
+    }
+
+    .fixed {
+      position: fixed
+    }
+
+    .inset-0 {
+      inset: 0
+    }
+
+    .z-50 {
+      z-index: 50
+    }
+
+    .col-span-full {
+      grid-column: 1/-1
+    }
+
+    .mx-auto {
+      margin-left: auto;
+      margin-right: auto
+    }
+
+    .mb-1 {
+      margin-bottom: .25rem
+    }
+
+    .mb-2 {
+      margin-bottom: .5rem
+    }
+
+    .mr-1 {
+      margin-right: .25rem
+    }
+
+    .mr-1\.5 {
+      margin-right: .375rem
+    }
+
+    .mt-0\.5 {
+      margin-top: .125rem
+    }
+
+    .mt-1 {
+      margin-top: .25rem
+    }
+
+    .mt-2 {
+      margin-top: .5rem
+    }
+
+    .line-clamp-1 {
+      -webkit-line-clamp: 1
+    }
+
+    .line-clamp-1,
+    .line-clamp-2 {
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical
+    }
+
+    .line-clamp-2 {
+      -webkit-line-clamp: 2
+    }
+
+    .block {
+      display: block
+    }
+
+    .inline-block {
+      display: inline-block
+    }
+
+    .inline {
+      display: inline
+    }
+
+    .flex {
+      display: flex
+    }
+
+    .grid {
+      display: grid
+    }
+
+    .hidden {
+      display: none
+    }
+
+    .h-3\.5 {
+      height: .875rem
+    }
+
+    .h-4 {
+      height: 1rem
+    }
+
+    .h-6 {
+      height: 1.5rem
+    }
+
+    .h-8 {
+      height: 2rem
+    }
+
+    .h-9 {
+      height: 2.25rem
+    }
+
+    .min-h-screen {
+      min-height: 100vh
+    }
+
+    .w-3\.5 {
+      width: .875rem
+    }
+
+    .w-4 {
+      width: 1rem
+    }
+
+    .w-6 {
+      width: 1.5rem
+    }
+
+    .w-8 {
+      width: 2rem
+    }
+
+    .w-9 {
+      width: 2.25rem
+    }
+
+    .w-full {
+      width: 100%
+    }
+
+    .min-w-0 {
+      min-width: 0
+    }
+
+    .max-w-2xl {
+      max-width: 42rem
+    }
+
+    .max-w-6xl {
+      max-width: 72rem
+    }
+
+    .max-w-md {
+      max-width: 28rem
+    }
+
+    .flex-shrink-0 {
+      flex-shrink: 0
+    }
+
+    .flex-grow {
+      flex-grow: 1
+    }
+
+    .resize-none {
+      resize: none
+    }
+
+    .grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr))
+    }
+
+    .grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .flex-col {
+      flex-direction: column
+    }
+
+    .flex-wrap {
+      flex-wrap: wrap
+    }
+
+    .items-start {
+      align-items: flex-start
+    }
+
+    .items-end {
+      align-items: flex-end
+    }
+
+    .items-center {
+      align-items: center
+    }
+
+    .justify-end {
+      justify-content: flex-end
+    }
+
+    .justify-center {
+      justify-content: center
+    }
+
+    .justify-between {
+      justify-content: space-between
+    }
+
+    .gap-1 {
+      gap: .25rem
+    }
+
+    .gap-2 {
+      gap: .5rem
+    }
+
+    .gap-3 {
+      gap: .75rem
+    }
+
+    .gap-4 {
+      gap: 1rem
+    }
+
+    .space-y-2>:not([hidden])~:not([hidden]) {
+      --tw-space-y-reverse: 0;
+      margin-top: calc(.5rem*(1 - var(--tw-space-y-reverse)));
+      margin-bottom: calc(.5rem*var(--tw-space-y-reverse))
+    }
+
+    .space-y-3>:not([hidden])~:not([hidden]) {
+      --tw-space-y-reverse: 0;
+      margin-top: calc(.75rem*(1 - var(--tw-space-y-reverse)));
+      margin-bottom: calc(.75rem*var(--tw-space-y-reverse))
+    }
+
+    .space-y-4>:not([hidden])~:not([hidden]) {
+      --tw-space-y-reverse: 0;
+      margin-top: calc(1rem*(1 - var(--tw-space-y-reverse)));
+      margin-bottom: calc(1rem*var(--tw-space-y-reverse))
+    }
+
+    .space-y-6>:not([hidden])~:not([hidden]) {
+      --tw-space-y-reverse: 0;
+      margin-top: calc(1.5rem*(1 - var(--tw-space-y-reverse)));
+      margin-bottom: calc(1.5rem*var(--tw-space-y-reverse))
+    }
+
+    .overflow-x-auto {
+      overflow-x: auto
+    }
+
+    .truncate {
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .truncate,
+    .whitespace-nowrap {
+      white-space: nowrap
+    }
+
+    .break-all {
+      word-break: break-all
+    }
+
+    .rounded {
+      border-radius: .25rem
+    }
+
+    .rounded-2xl {
+      border-radius: 1rem
+    }
+
+    .rounded-lg {
+      border-radius: .5rem
+    }
+
+    .rounded-xl {
+      border-radius: .75rem
+    }
+
+    .border {
+      border-width: 1px
+    }
+
+    .border-b {
+      border-bottom-width: 1px
+    }
+
+    .border-b-2 {
+      border-bottom-width: 2px
+    }
+
+    .border-t {
+      border-top-width: 1px
+    }
+
+    .border-dashed {
+      border-style: dashed
+    }
+
+    .border-emerald-500 {
+      --tw-border-opacity: 1;
+      border-color: rgb(16 185 129/var(--tw-border-opacity, 1))
+    }
+
+    .border-emerald-800 {
+      --tw-border-opacity: 1;
+      border-color: rgb(6 95 70/var(--tw-border-opacity, 1))
+    }
+
+    .border-emerald-800\/50 {
+      border-color: rgba(6, 95, 70, .5)
+    }
+
+    .border-indigo-400 {
+      --tw-border-opacity: 1;
+      border-color: rgb(129 140 248/var(--tw-border-opacity, 1))
+    }
+
+    .border-indigo-800\/50 {
+      border-color: rgba(55, 48, 163, .5)
+    }
+
+    .border-rose-500 {
+      --tw-border-opacity: 1;
+      border-color: rgb(244 63 94/var(--tw-border-opacity, 1))
+    }
+
+    .border-rose-800 {
+      --tw-border-opacity: 1;
+      border-color: rgb(159 18 57/var(--tw-border-opacity, 1))
+    }
+
+    .border-rose-800\/50 {
+      border-color: rgba(159, 18, 57, .5)
+    }
+
+    .border-rose-900\/60 {
+      border-color: rgba(136, 19, 55, .6)
+    }
+
+    .border-slate-700 {
+      --tw-border-opacity: 1;
+      border-color: rgb(51 65 85/var(--tw-border-opacity, 1))
+    }
+
+    .border-slate-700\/60 {
+      border-color: rgba(51, 65, 85, .6)
+    }
+
+    .border-slate-700\/80 {
+      border-color: rgba(51, 65, 85, .8)
+    }
+
+    .border-slate-800 {
+      --tw-border-opacity: 1;
+      border-color: rgb(30 41 59/var(--tw-border-opacity, 1))
+    }
+
+    .border-transparent {
+      border-color: transparent
+    }
+
+    .bg-emerald-950\/80 {
+      background-color: rgba(2, 44, 34, .8)
+    }
+
+    .bg-indigo-600 {
+      --tw-bg-opacity: 1;
+      background-color: rgb(79 70 229/var(--tw-bg-opacity, 1))
+    }
+
+    .bg-indigo-950 {
+      --tw-bg-opacity: 1;
+      background-color: rgb(30 27 75/var(--tw-bg-opacity, 1))
+    }
+
+    .bg-rose-600 {
+      --tw-bg-opacity: 1;
+      background-color: rgb(225 29 72/var(--tw-bg-opacity, 1))
+    }
+
+    .bg-rose-950\/40 {
+      background-color: rgba(76, 5, 25, .4)
+    }
+
+    .bg-rose-950\/80 {
+      background-color: rgba(76, 5, 25, .8)
+    }
+
+    .bg-slate-700 {
+      --tw-bg-opacity: 1;
+      background-color: rgb(51 65 85/var(--tw-bg-opacity, 1))
+    }
+
+    .bg-slate-800 {
+      --tw-bg-opacity: 1;
+      background-color: rgb(30 41 59/var(--tw-bg-opacity, 1))
+    }
+
+    .bg-slate-900 {
+      --tw-bg-opacity: 1;
+      background-color: rgb(15 23 42/var(--tw-bg-opacity, 1))
+    }
+
+    .bg-slate-900\/70 {
+      background-color: rgba(15, 23, 42, .7)
+    }
+
+    .bg-slate-900\/80 {
+      background-color: rgba(15, 23, 42, .8)
+    }
+
+    .bg-slate-950 {
+      --tw-bg-opacity: 1;
+      background-color: rgb(2 6 23/var(--tw-bg-opacity, 1))
+    }
+
+    .bg-slate-950\/80 {
+      background-color: rgba(2, 6, 23, .8)
+    }
+
+    .p-1 {
+      padding: .25rem
+    }
+
+    .p-3 {
+      padding: .75rem
+    }
+
+    .p-3\.5 {
+      padding: .875rem
+    }
+
+    .p-4 {
+      padding: 1rem
+    }
+
+    .p-5 {
+      padding: 1.25rem
+    }
+
+    .p-6 {
+      padding: 1.5rem
+    }
+
+    .px-1 {
+      padding-left: .25rem;
+      padding-right: .25rem
+    }
+
+    .px-2 {
+      padding-left: .5rem;
+      padding-right: .5rem
+    }
+
+    .px-3 {
+      padding-left: .75rem;
+      padding-right: .75rem
+    }
+
+    .px-3\.5 {
+      padding-left: .875rem;
+      padding-right: .875rem
+    }
+
+    .px-4 {
+      padding-left: 1rem;
+      padding-right: 1rem
+    }
+
+    .px-5 {
+      padding-left: 1.25rem;
+      padding-right: 1.25rem
+    }
+
+    .py-0\.5 {
+      padding-top: .125rem;
+      padding-bottom: .125rem
+    }
+
+    .py-1\.5 {
+      padding-top: .375rem;
+      padding-bottom: .375rem
+    }
+
+    .py-10 {
+      padding-top: 2.5rem;
+      padding-bottom: 2.5rem
+    }
+
+    .py-2 {
+      padding-top: .5rem;
+      padding-bottom: .5rem
+    }
+
+    .py-2\.5 {
+      padding-top: .625rem;
+      padding-bottom: .625rem
+    }
+
+    .py-4 {
+      padding-top: 1rem;
+      padding-bottom: 1rem
+    }
+
+    .pb-2 {
+      padding-bottom: .5rem
+    }
+
+    .pb-3 {
+      padding-bottom: .75rem
+    }
+
+    .pt-2 {
+      padding-top: .5rem
+    }
+
+    .pt-4 {
+      padding-top: 1rem
+    }
+
+    .text-left {
+      text-align: left
+    }
+
+    .text-center {
+      text-align: center
+    }
+
+    .align-text-bottom {
+      vertical-align: text-bottom
+    }
+
+    .text-3xl {
+      font-size: 1.875rem;
+      line-height: 2.25rem
+    }
+
+    .text-\[10px\] {
+      font-size: 10px
+    }
+
+    .text-\[11px\] {
+      font-size: 11px
+    }
+
+    .text-lg {
+      font-size: 1.125rem;
+      line-height: 1.75rem
+    }
+
+    .text-sm {
+      font-size: .875rem;
+      line-height: 1.25rem
+    }
+
+    .text-xl {
+      font-size: 1.25rem;
+      line-height: 1.75rem
+    }
+
+    .text-xs {
+      font-size: .75rem;
+      line-height: 1rem
+    }
+
+    .font-bold {
+      font-weight: 700
+    }
+
+    .font-extrabold {
+      font-weight: 800
+    }
+
+    .font-medium {
+      font-weight: 500
+    }
+
+    .font-semibold {
+      font-weight: 600
+    }
+
+    .italic {
+      font-style: italic
+    }
+
+    .leading-relaxed {
+      line-height: 1.625
+    }
+
+    .text-amber-400 {
+      --tw-text-opacity: 1;
+      color: rgb(251 191 36/var(--tw-text-opacity, 1))
+    }
+
+    .text-emerald-300 {
+      --tw-text-opacity: 1;
+      color: rgb(110 231 183/var(--tw-text-opacity, 1))
+    }
+
+    .text-emerald-400 {
+      --tw-text-opacity: 1;
+      color: rgb(52 211 153/var(--tw-text-opacity, 1))
+    }
+
+    .text-indigo-300 {
+      --tw-text-opacity: 1;
+      color: rgb(165 180 252/var(--tw-text-opacity, 1))
+    }
+
+    .text-indigo-400 {
+      --tw-text-opacity: 1;
+      color: rgb(129 140 248/var(--tw-text-opacity, 1))
+    }
+
+    .text-rose-300 {
+      --tw-text-opacity: 1;
+      color: rgb(253 164 175/var(--tw-text-opacity, 1))
+    }
+
+    .text-rose-400 {
+      --tw-text-opacity: 1;
+      color: rgb(251 113 133/var(--tw-text-opacity, 1))
+    }
+
+    .text-slate-100 {
+      --tw-text-opacity: 1;
+      color: rgb(241 245 249/var(--tw-text-opacity, 1))
+    }
+
+    .text-slate-200 {
+      --tw-text-opacity: 1;
+      color: rgb(226 232 240/var(--tw-text-opacity, 1))
+    }
+
+    .text-slate-300 {
+      --tw-text-opacity: 1;
+      color: rgb(203 213 225/var(--tw-text-opacity, 1))
+    }
+
+    .text-slate-400 {
+      --tw-text-opacity: 1;
+      color: rgb(148 163 184/var(--tw-text-opacity, 1))
+    }
+
+    .text-white {
+      --tw-text-opacity: 1;
+      color: rgb(255 255 255/var(--tw-text-opacity, 1))
+    }
+
+    .opacity-60 {
+      opacity: .6
+    }
+
+    .shadow-2xl {
+      --tw-shadow: 0 25px 50px -12px rgba(0, 0, 0, .25);
+      --tw-shadow-colored: 0 25px 50px -12px var(--tw-shadow-color);
+      box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
+    }
+
+    .outline {
+      outline-style: solid
+    }
+
+    .filter {
+      filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)
+    }
+
+    .backdrop-blur-sm {
+      --tw-backdrop-blur: blur(4px);
+      -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+      backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
+    }
+
+    .transition-all {
+      transition-property: all;
+      transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+      transition-duration: .15s
+    }
+
+    .transition-colors {
+      transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+      transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+      transition-duration: .15s
+    }
+
+    .hover\:border-indigo-500\/50:hover {
+      border-color: rgba(99, 102, 241, .5)
+    }
+
+    .hover\:border-slate-600:hover {
+      --tw-border-opacity: 1;
+      border-color: rgb(71 85 105/var(--tw-border-opacity, 1))
+    }
+
+    .hover\:bg-indigo-500:hover {
+      --tw-bg-opacity: 1;
+      background-color: rgb(99 102 241/var(--tw-bg-opacity, 1))
+    }
+
+    .hover\:bg-indigo-950\/50:hover {
+      background-color: rgba(30, 27, 75, .5)
+    }
+
+    .hover\:bg-rose-500:hover {
+      --tw-bg-opacity: 1;
+      background-color: rgb(244 63 94/var(--tw-bg-opacity, 1))
+    }
+
+    .hover\:bg-slate-600:hover {
+      --tw-bg-opacity: 1;
+      background-color: rgb(71 85 105/var(--tw-bg-opacity, 1))
+    }
+
+    .hover\:text-indigo-300:hover {
+      --tw-text-opacity: 1;
+      color: rgb(165 180 252/var(--tw-text-opacity, 1))
+    }
+
+    .hover\:text-indigo-400:hover {
+      --tw-text-opacity: 1;
+      color: rgb(129 140 248/var(--tw-text-opacity, 1))
+    }
+
+    .hover\:text-rose-400:hover {
+      --tw-text-opacity: 1;
+      color: rgb(251 113 133/var(--tw-text-opacity, 1))
+    }
+
+    .hover\:text-slate-200:hover {
+      --tw-text-opacity: 1;
+      color: rgb(226 232 240/var(--tw-text-opacity, 1))
+    }
+
+    .focus\:border-indigo-500:focus {
+      --tw-border-opacity: 1;
+      border-color: rgb(99 102 241/var(--tw-border-opacity, 1))
+    }
+
+    .focus\:outline-none:focus {
+      outline: 2px solid transparent;
+      outline-offset: 2px
+    }
+
+    @media (min-width:640px) {
+      .sm\:col-span-1 {
+        grid-column: span 1/span 1
+      }
+
+      .sm\:grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+
+      .sm\:grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+      }
+
+      .sm\:grid-cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr))
+      }
+
+      .sm\:flex-row {
+        flex-direction: row
+      }
+
+      .sm\:items-end {
+        align-items: flex-end
+      }
+
+      .sm\:justify-between {
+        justify-content: space-between
+      }
+
+      .sm\:p-6 {
+        padding: 1.5rem
+      }
+    }
+
+    @media (min-width:1024px) {
+      .lg\:grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+      }
+    }
+  </style>
+
+  <!-- CSS tambahan kecil (tanpa web font eksternal: pakai font bawaan perangkat) -->
+  <style>
+    html {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid #818cf8;
+      outline-offset: 2px;
+    }
+  </style>
 </head>
 
-<body class="font-body text-ink min-h-screen flex flex-col">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
 
-  <!-- ============ HEADER ============ -->
-  <header class="bg-brand text-paper">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-5 flex items-center gap-3">
-      <i class="ti ti-archive text-3xl text-gold" aria-hidden="true"></i>
-      <div>
-        <h1 class="font-display text-2xl sm:text-3xl font-semibold leading-tight">LaciKu</h1>
-        <p class="text-xs sm:text-sm text-paper/70">Satu laci, tiga catatan: keuangan, tautan, dan kuis.</p>
-      </div>
+  <!-- Header + navigasi tab -->
+  <header class="bg-slate-900 border-b border-slate-800">
+    <div class="max-w-6xl mx-auto px-4 pt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <span class="font-bold text-lg text-indigo-400">KopdesFITE</span>
+
+      <nav aria-label="Navigasi fitur">
+        <div role="tablist" class="flex gap-4 text-xs font-semibold overflow-x-auto">
+          <button type="button" role="tab" id="tab-btn-expense" data-tab-target="panel-expense"
+            aria-controls="panel-expense"
+            class="tab-btn px-1 pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition-colors">
+            Catatan Keuangan
+          </button>
+          <button type="button" role="tab" id="tab-btn-bookmark" data-tab-target="panel-bookmark"
+            aria-controls="panel-bookmark"
+            class="tab-btn px-1 pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition-colors">
+            Bookmark Manager
+          </button>
+          <button type="button" role="tab" id="tab-btn-quiz" data-tab-target="panel-quiz" aria-controls="panel-quiz"
+            class="tab-btn px-1 pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition-colors">
+            Kuis Interaktif
+          </button>
+        </div>
+      </nav>
     </div>
   </header>
 
-  <!-- ============ NAV TAB (folder style) ============ -->
-  <nav class="max-w-5xl mx-auto w-full px-4 sm:px-6 pt-4" aria-label="Navigasi fitur">
-    <div class="flex gap-1" role="tablist">
-      <button
-        type="button"
-        id="tab-btn-expense"
-        class="tab-btn flex-1 sm:flex-none sm:w-56 px-4 py-3 font-semibold text-sm flex items-center justify-center gap-2"
-        role="tab"
-        aria-controls="panel-expense"
-        aria-selected="false"
-      >
-        <i class="ti ti-wallet" aria-hidden="true"></i>
-        <span class="hidden xs:inline sm:inline">Pengeluaran</span>
-        <span class="xs:hidden sm:hidden">Uang</span>
-      </button>
-      <button
-        type="button"
-        id="tab-btn-bookmark"
-        class="tab-btn flex-1 sm:flex-none sm:w-56 px-4 py-3 font-semibold text-sm flex items-center justify-center gap-2"
-        role="tab"
-        aria-controls="panel-bookmark"
-        aria-selected="false"
-      >
-        <i class="ti ti-bookmarks" aria-hidden="true"></i>
-        <span>Bookmark</span>
-      </button>
-      <button
-        type="button"
-        id="tab-btn-quiz"
-        class="tab-btn flex-1 sm:flex-none sm:w-56 px-4 py-3 font-semibold text-sm flex items-center justify-center gap-2"
-        role="tab"
-        aria-controls="panel-quiz"
-        aria-selected="false"
-      >
-        <i class="ti ti-help-hexagon" aria-hidden="true"></i>
-        <span>Kuis</span>
-      </button>
-    </div>
-  </nav>
+  <main class="max-w-6xl w-full mx-auto p-4 sm:p-6 flex-grow">
 
-  <!-- ============ MAIN ============ -->
-  <main class="flex-1 w-full">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 pb-16">
-      <div class="bg-surface border border-[#E4DEC8] rounded-b-lg rounded-tr-lg p-4 sm:p-6">
+    <!-- ================= TAB 1: EXPENSE TRACKER ================= -->
+    <section id="panel-expense" role="tabpanel" aria-labelledby="tab-btn-expense" data-tab-panel
+      class="hidden space-y-6">
+      <h1 class="text-xl font-bold text-slate-100">Catatan Pengeluaran Harian</h1>
 
-        <!-- ============================================================ -->
-        <!-- PANEL 1: EXPENSE TRACKER                                      -->
-        <!-- ============================================================ -->
-        <section id="panel-expense" class="panel" role="tabpanel" aria-labelledby="tab-btn-expense">
-          <h2 class="font-display text-xl font-semibold mb-1">Catatan Pengeluaran Harian</h2>
-          <p class="text-sm text-inkmuted mb-5">Catat pemasukan dan pengeluaran harianmu, lalu pantau saldonya.</p>
-
-          <!-- Ringkasan -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-            <div class="row-card p-4">
-              <p class="field-label">Total Pemasukan</p>
-              <p id="expense-total-income" class="font-display text-xl font-semibold text-leaf mt-1">Rp 0</p>
-            </div>
-            <div class="row-card p-4">
-              <p class="field-label">Total Pengeluaran</p>
-              <p id="expense-total-expense" class="font-display text-xl font-semibold text-rust mt-1">Rp 0</p>
-            </div>
-            <div class="row-card p-4">
-              <p class="field-label">Saldo</p>
-              <p id="expense-balance" class="font-display text-xl font-semibold text-brand mt-1">Rp 0</p>
-            </div>
-          </div>
-
-          <!-- Form tambah transaksi -->
-          <form id="expense-form" novalidate class="row-card p-4 mb-6">
-            <h3 class="font-semibold text-sm mb-3">Tambah Transaksi</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="field-label" for="expense-title">Judul / Deskripsi</label>
-                <input id="expense-title" name="title" type="text" class="input-base mt-1" placeholder="Contoh: Makan siang" />
-                <p class="error-text" id="expense-title-error"></p>
-              </div>
-              <div>
-                <label class="field-label" for="expense-category">Kategori</label>
-                <select id="expense-category" name="category" class="input-base mt-1">
-                  <option value="Makanan">Makanan</option>
-                  <option value="Transportasi">Transportasi</option>
-                  <option value="Belanja">Belanja</option>
-                  <option value="Hiburan">Hiburan</option>
-                  <option value="Tagihan">Tagihan</option>
-                  <option value="Pendidikan">Pendidikan</option>
-                  <option value="Gaji">Gaji</option>
-                  <option value="Lainnya">Lainnya</option>
-                </select>
-              </div>
-              <div>
-                <label class="field-label" for="expense-amount">Jumlah (Rp)</label>
-                <input id="expense-amount" name="amount" type="number" min="1" step="1" class="input-base mt-1" placeholder="Contoh: 25000" />
-                <p class="error-text" id="expense-amount-error"></p>
-              </div>
-              <div>
-                <label class="field-label" for="expense-type">Tipe</label>
-                <select id="expense-type" name="type" class="input-base mt-1">
-                  <option value="pengeluaran">Pengeluaran</option>
-                  <option value="pemasukan">Pemasukan</option>
-                </select>
-              </div>
-              <div class="sm:col-span-2">
-                <label class="field-label" for="expense-date">Tanggal</label>
-                <input id="expense-date" name="date" type="date" class="input-base mt-1" />
-                <p class="error-text" id="expense-date-error"></p>
-              </div>
-            </div>
-            <div class="mt-4">
-              <button type="submit" class="btn btn-primary">
-                <i class="ti ti-plus" aria-hidden="true"></i> Tambah Transaksi
-              </button>
-            </div>
-          </form>
-
-          <!-- Pencarian & filter -->
-          <div class="flex flex-col sm:flex-row gap-3 mb-4">
-            <div class="flex-1">
-              <input id="expense-search" type="text" class="input-base" placeholder="Cari berdasarkan judul..." aria-label="Cari transaksi berdasarkan judul" />
-            </div>
-            <select id="expense-filter-type" class="input-base sm:w-44" aria-label="Filter berdasarkan tipe transaksi">
-              <option value="all">Semua Tipe</option>
-              <option value="pemasukan">Pemasukan</option>
-              <option value="pengeluaran">Pengeluaran</option>
-            </select>
-            <select id="expense-filter-category" class="input-base sm:w-44" aria-label="Filter berdasarkan kategori">
-              <option value="all">Semua Kategori</option>
-              <option value="Makanan">Makanan</option>
-              <option value="Transportasi">Transportasi</option>
-              <option value="Belanja">Belanja</option>
-              <option value="Hiburan">Hiburan</option>
-              <option value="Tagihan">Tagihan</option>
-              <option value="Pendidikan">Pendidikan</option>
-              <option value="Gaji">Gaji</option>
-              <option value="Lainnya">Lainnya</option>
-            </select>
-            <select id="expense-sort" class="input-base sm:w-48" aria-label="Urutkan transaksi">
-              <option value="newest">Terbaru</option>
-              <option value="oldest">Terlama</option>
-              <option value="amount-desc">Jumlah Terbesar</option>
-              <option value="amount-asc">Jumlah Terkecil</option>
-            </select>
-          </div>
-
-          <!-- Daftar transaksi -->
-          <div id="expense-list" class="space-y-2"></div>
-          <div id="expense-empty" class="hidden text-center py-10 text-inkmuted">
-            <i class="ti ti-file-off text-3xl mb-2 block" aria-hidden="true"></i>
-            Belum ada transaksi. Tambahkan transaksi pertamamu di atas.
-          </div>
-        </section>
-
-        <!-- ============================================================ -->
-        <!-- PANEL 2: BOOKMARK MANAGER                                     -->
-        <!-- ============================================================ -->
-        <section id="panel-bookmark" class="panel" role="tabpanel" aria-labelledby="tab-btn-bookmark">
-          <h2 class="font-display text-xl font-semibold mb-1">Bookmark / Link Manager</h2>
-          <p class="text-sm text-inkmuted mb-5">Simpan tautan favoritmu lengkap dengan kategori dan catatan singkat.</p>
-
-          <!-- Form tambah bookmark -->
-          <form id="bookmark-form" novalidate class="row-card p-4 mb-6">
-            <h3 class="font-semibold text-sm mb-3">Tambah Bookmark</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="field-label" for="bookmark-title">Nama / Judul</label>
-                <input id="bookmark-title" name="title" type="text" class="input-base mt-1" placeholder="Contoh: MDN Web Docs" />
-                <p class="error-text" id="bookmark-title-error"></p>
-              </div>
-              <div>
-                <label class="field-label" for="bookmark-url">URL</label>
-                <input id="bookmark-url" name="url" type="text" class="input-base mt-1" placeholder="https://developer.mozilla.org" />
-                <p class="error-text" id="bookmark-url-error"></p>
-              </div>
-              <div>
-                <label class="field-label" for="bookmark-category">Kategori / Tag</label>
-                <input id="bookmark-category" name="category" type="text" class="input-base mt-1" placeholder="Contoh: Referensi" />
-                <p class="error-text" id="bookmark-category-error"></p>
-              </div>
-              <div>
-                <label class="field-label" for="bookmark-note">Catatan (opsional)</label>
-                <input id="bookmark-note" name="note" type="text" class="input-base mt-1" placeholder="Catatan singkat" />
-              </div>
-            </div>
-            <div class="mt-4">
-              <button type="submit" class="btn btn-primary">
-                <i class="ti ti-plus" aria-hidden="true"></i> Tambah Bookmark
-              </button>
-            </div>
-          </form>
-
-          <!-- Pencarian & sorting -->
-          <div class="flex flex-col sm:flex-row gap-3 mb-4">
-            <div class="flex-1">
-              <input id="bookmark-search" type="text" class="input-base" placeholder="Cari nama, URL, atau kategori..." aria-label="Cari bookmark berdasarkan nama, URL, atau kategori" />
-            </div>
-            <select id="bookmark-sort" class="input-base sm:w-52" aria-label="Urutkan bookmark">
-              <option value="newest">Terbaru</option>
-              <option value="title-asc">Judul A–Z</option>
-              <option value="title-desc">Judul Z–A</option>
-            </select>
-          </div>
-
-          <!-- Daftar bookmark -->
-          <div id="bookmark-list" class="space-y-2"></div>
-          <div id="bookmark-empty" class="hidden text-center py-10 text-inkmuted">
-            <i class="ti ti-bookmark-off text-3xl mb-2 block" aria-hidden="true"></i>
-            Belum ada bookmark tersimpan. Tambahkan tautan pertamamu di atas.
-          </div>
-        </section>
-
-        <!-- ============================================================ -->
-        <!-- PANEL 3: QUIZ APP                                             -->
-        <!-- ============================================================ -->
-        <section id="panel-quiz" class="panel" role="tabpanel" aria-labelledby="tab-btn-quiz">
-          <h2 class="font-display text-xl font-semibold mb-1">Kuis Interaktif</h2>
-          <p class="text-sm text-inkmuted mb-5">Uji pemahaman dasar web-mu lewat enam pertanyaan singkat.</p>
-
-          <div class="row-card p-4 mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2 text-sm">
-              <i class="ti ti-trophy text-gold" aria-hidden="true"></i>
-              <span>Skor Tertinggi: <strong id="quiz-highscore">0</strong> / <span id="quiz-highscore-total">6</span></span>
-            </div>
-          </div>
-
-          <!-- Layar mulai -->
-          <div id="quiz-start-screen" class="row-card p-8 text-center">
-            <i class="ti ti-help-hexagon text-4xl text-brand mb-3 block" aria-hidden="true"></i>
-            <h3 class="font-display text-lg font-semibold mb-2">Siap menguji pemahamanmu?</h3>
-            <p class="text-sm text-inkmuted mb-4">Kuis terdiri dari 6 soal pilihan ganda seputar dasar web.</p>
-            <button id="quiz-start-btn" type="button" class="btn btn-primary">
-              <i class="ti ti-player-play" aria-hidden="true"></i> Mulai Kuis
-            </button>
-          </div>
-
-          <!-- Layar soal -->
-          <div id="quiz-question-screen" class="hidden">
-            <div class="flex items-center justify-between mb-3 text-sm text-inkmuted">
-              <span>Soal <span id="quiz-current-number">1</span> dari <span id="quiz-total-number">6</span></span>
-              <span>Skor: <strong id="quiz-current-score">0</strong></span>
-            </div>
-            <div class="w-full h-1.5 bg-[#E4DEC8] rounded-full mb-5 overflow-hidden">
-              <div id="quiz-progress-bar" class="h-full bg-gold" style="width: 0%"></div>
-            </div>
-            <div class="row-card p-5 mb-4">
-              <h3 id="quiz-question-text" class="font-display text-lg font-semibold mb-4"></h3>
-              <div id="quiz-options" class="space-y-2"></div>
-            </div>
-            <p id="quiz-feedback" class="text-sm font-semibold mb-4 min-h-[1.25rem]"></p>
-            <button id="quiz-next-btn" type="button" class="btn btn-primary hidden">
-              Soal Berikutnya <i class="ti ti-arrow-right" aria-hidden="true"></i>
-            </button>
-          </div>
-
-          <!-- Layar hasil -->
-          <div id="quiz-result-screen" class="hidden row-card p-8 text-center">
-            <i class="ti ti-confetti text-4xl text-gold mb-3 block" aria-hidden="true"></i>
-            <h3 class="font-display text-lg font-semibold mb-2">Kuis Selesai!</h3>
-            <p class="text-3xl font-display font-semibold text-brand mb-1">
-              <span id="quiz-final-score">0</span> / <span id="quiz-final-total">6</span>
-            </p>
-            <p id="quiz-result-message" class="text-sm text-inkmuted mb-5"></p>
-            <button id="quiz-restart-btn" type="button" class="btn btn-primary">
-              <i class="ti ti-refresh" aria-hidden="true"></i> Main Lagi
-            </button>
-          </div>
-        </section>
-
+      <!-- Ringkasan -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+          <span class="text-xs text-slate-400">Total Pemasukan</span>
+          <div id="total-pemasukan" class="text-lg font-bold text-emerald-400">Rp 0</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+          <span class="text-xs text-slate-400">Total Pengeluaran</span>
+          <div id="total-pengeluaran" class="text-lg font-bold text-rose-400">Rp 0</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+          <span class="text-xs text-slate-400">Sisa Saldo</span>
+          <div id="total-saldo" class="text-lg font-bold text-indigo-400">Rp 0</div>
+        </div>
       </div>
-    </div>
+
+      <!-- Form tambah transaksi (isi <select> kategori diisi dari script.js) -->
+      <form id="form-expense" novalidate class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
+        <h2 class="text-sm font-semibold text-slate-200">Tambah Transaksi Baru</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label for="expense-judul" class="text-xs text-slate-300 block mb-1">Judul / Deskripsi</label>
+            <input type="text" id="expense-judul" placeholder="Makan siang"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label for="expense-kategori" class="text-xs text-slate-300 block mb-1">Kategori</label>
+            <select id="expense-kategori"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+          </div>
+          <div>
+            <label for="expense-jumlah" class="text-xs text-slate-300 block mb-1">Jumlah (Rp)</label>
+            <input type="number" id="expense-jumlah" min="1" placeholder="25000"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label for="expense-tipe" class="text-xs text-slate-300 block mb-1">Tipe</label>
+            <select id="expense-tipe"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+              <option value="Pengeluaran">Pengeluaran</option>
+              <option value="Pemasukan">Pemasukan</option>
+            </select>
+          </div>
+          <div>
+            <label for="expense-tanggal" class="text-xs text-slate-300 block mb-1">Tanggal</label>
+            <input type="date" id="expense-tanggal"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div class="flex items-end">
+            <button type="submit"
+              class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition-colors">Tambah
+              Transaksi</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Cari, filter, urutkan -->
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <input type="search" id="expense-search" placeholder="Cari judul transaksi..."
+          aria-label="Cari transaksi berdasarkan judul"
+          class="sm:col-span-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+        <select id="expense-filter-tipe" aria-label="Filter berdasarkan tipe"
+          class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          <option value="SEMUA">Semua Tipe</option>
+          <option value="Pengeluaran">Pengeluaran</option>
+          <option value="Pemasukan">Pemasukan</option>
+        </select>
+        <select id="expense-filter-kategori" aria-label="Filter berdasarkan kategori"
+          class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+        <select id="expense-sort" aria-label="Urutkan transaksi"
+          class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          <option value="terbaru">Terbaru</option>
+          <option value="terlama">Terlama</option>
+          <option value="terbesar">Nominal Terbesar</option>
+          <option value="terkecil">Nominal Terkecil</option>
+        </select>
+      </div>
+
+      <div id="daftar-expense" class="space-y-2"></div>
+    </section>
+
+    <!-- ================= TAB 2: BOOKMARK MANAGER ================= -->
+    <section id="panel-bookmark" role="tabpanel" aria-labelledby="tab-btn-bookmark" data-tab-panel
+      class="hidden space-y-6">
+      <h1 class="text-xl font-bold text-slate-100">Link &amp; Bookmark Manager</h1>
+
+      <form id="form-bookmark" novalidate class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
+        <h2 class="text-sm font-semibold text-slate-200">Tambah Bookmark Baru</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="bookmark-nama" class="text-xs text-slate-300 block mb-1">Nama Situs</label>
+            <input type="text" id="bookmark-nama" placeholder="Institut Teknologi Del"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label for="bookmark-url" class="text-xs text-slate-300 block mb-1">URL Tautan</label>
+            <input type="url" id="bookmark-url" placeholder="https://del.ac.id"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label for="bookmark-kategori" class="text-xs text-slate-300 block mb-1">Kategori</label>
+            <select id="bookmark-kategori"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+          </div>
+          <div>
+            <label for="bookmark-catatan" class="text-xs text-slate-300 block mb-1">Catatan Singkat (opsional)</label>
+            <input type="text" id="bookmark-catatan" placeholder="Catatan singkat"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+        <div class="flex justify-end pt-2">
+          <button type="submit"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-4 rounded-lg text-xs transition-colors">Simpan
+            Bookmark</button>
+        </div>
+      </form>
+
+      <div class="flex flex-col sm:flex-row gap-3">
+        <input type="search" id="bookmark-search" placeholder="Cari nama, URL, atau kategori..."
+          aria-label="Cari bookmark"
+          class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+        <select id="bookmark-sort" aria-label="Urutkan bookmark"
+          class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+          <option value="terbaru">Terbaru</option>
+          <option value="az">Nama (A - Z)</option>
+          <option value="za">Nama (Z - A)</option>
+        </select>
+      </div>
+
+      <div id="daftar-bookmark" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </section>
+
+    <!-- ================= TAB 3: KUIS INTERAKTIF ================= -->
+    <section id="panel-quiz" role="tabpanel" aria-labelledby="tab-btn-quiz" data-tab-panel class="hidden">
+      <div class="max-w-2xl mx-auto space-y-6">
+        <h1 class="text-xl font-bold text-slate-100 text-center">Kuis Interaktif Web Development</h1>
+
+        <div
+          class="flex items-center justify-between bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-xs">
+          <span class="text-slate-300"><svg class="w-4 h-4 text-amber-400 mr-1.5 inline-block align-text-bottom"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+              <path d="M4 22h16" />
+              <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+            </svg> Skor Tertinggi:</span>
+          <span id="quiz-high-score-val" class="font-bold text-amber-400 text-sm">0</span>
+        </div>
+
+        <!-- Layar mulai -->
+        <div id="quiz-screen-start" class="text-center space-y-4 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <p class="text-xs text-slate-300">Uji pemahaman dasar web development Anda lewat 5 soal pilihan ganda.</p>
+          <button type="button" id="btn-quiz-start"
+            class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition-all">Mulai
+            Kuis</button>
+        </div>
+
+        <!-- Layar soal -->
+        <div id="quiz-screen-running" class="hidden space-y-4 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex items-center justify-between text-xs text-slate-300 border-b border-slate-800 pb-2">
+            <span id="quiz-progress-text" class="font-medium">Soal 1 dari 5</span>
+            <span id="quiz-timer-text" class="font-bold text-amber-400">Waktu: 15s</span>
+          </div>
+          <p id="quiz-question-text" class="text-sm font-semibold text-slate-100 leading-relaxed"></p>
+          <div id="quiz-options-container" class="space-y-2"></div>
+          <div id="quiz-feedback" class="hidden" role="status"></div>
+          <div class="flex justify-end pt-2">
+            <button type="button" id="btn-quiz-next"
+              class="hidden px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium transition-all">Soal
+              Berikutnya</button>
+          </div>
+        </div>
+
+        <!-- Layar hasil -->
+        <div id="quiz-screen-result"
+          class="hidden text-center space-y-4 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <p class="text-xs text-slate-300">Kuis selesai!</p>
+          <div>
+            <span class="text-xs text-slate-300 block mb-1">Skor Akhir Anda</span>
+            <span id="quiz-final-score" class="text-3xl font-extrabold text-indigo-400">0 / 100</span>
+          </div>
+          <p id="quiz-new-record" class="hidden text-xs text-amber-400 font-bold"><svg
+              class="w-4 h-4 mr-1 inline-block align-text-bottom" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path
+                d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15" />
+              <path d="M11 12 5.12 2.2" />
+              <path d="m13 12 5.88-9.8" />
+              <path d="M8 7h8" />
+              <circle cx="12" cy="17" r="5" />
+            </svg> Rekor skor baru!</p>
+          <button type="button" id="btn-quiz-restart"
+            class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition-all">Ulangi
+            Kuis</button>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <!-- ============ FOOTER ============ -->
-  <footer class="bg-brand-dark text-paper/70 text-xs">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 text-center">
-      LaciKu — Studi Kasus PABWE P3. Dibuat dengan HTML, Tailwind CSS, dan JavaScript murni.
-    </div>
+  <footer class="border-t border-slate-800 py-4 text-center text-[11px] text-slate-400">
+    KopdesFITE &middot; Praktikum PABWE P3
   </footer>
 
-  <!-- ============================================================ -->
-  <!-- MODAL: UBAH TRANSAKSI (Expense)                                -->
-  <!-- ============================================================ -->
-  <div id="expense-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
-    <div class="modal-box">
-      <h3 id="expense-modal-title" class="font-display text-lg font-semibold mb-4">Ubah Transaksi</h3>
-      <form id="expense-edit-form" novalidate>
-        <input type="hidden" id="expense-edit-id" />
-        <div class="space-y-3">
-          <div>
-            <label class="field-label" for="expense-edit-title">Judul / Deskripsi</label>
-            <input id="expense-edit-title" type="text" class="input-base mt-1" />
-            <p class="error-text" id="expense-edit-title-error"></p>
-          </div>
-          <div>
-            <label class="field-label" for="expense-edit-category">Kategori</label>
-            <select id="expense-edit-category" class="input-base mt-1">
-              <option value="Makanan">Makanan</option>
-              <option value="Transportasi">Transportasi</option>
-              <option value="Belanja">Belanja</option>
-              <option value="Hiburan">Hiburan</option>
-              <option value="Tagihan">Tagihan</option>
-              <option value="Pendidikan">Pendidikan</option>
-              <option value="Gaji">Gaji</option>
-              <option value="Lainnya">Lainnya</option>
-            </select>
-          </div>
-          <div>
-            <label class="field-label" for="expense-edit-amount">Jumlah (Rp)</label>
-            <input id="expense-edit-amount" type="number" min="1" step="1" class="input-base mt-1" />
-            <p class="error-text" id="expense-edit-amount-error"></p>
-          </div>
-          <div>
-            <label class="field-label" for="expense-edit-type">Tipe</label>
-            <select id="expense-edit-type" class="input-base mt-1">
-              <option value="pengeluaran">Pengeluaran</option>
-              <option value="pemasukan">Pemasukan</option>
-            </select>
-          </div>
-          <div>
-            <label class="field-label" for="expense-edit-date">Tanggal</label>
-            <input id="expense-edit-date" type="date" class="input-base mt-1" />
-            <p class="error-text" id="expense-edit-date-error"></p>
-          </div>
-        </div>
-        <div class="mt-5 flex gap-2 justify-end">
-          <button type="button" class="btn btn-ghost" data-close-modal="expense-modal">Batal</button>
-          <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============================================================ -->
-  <!-- MODAL: HAPUS TRANSAKSI (Expense) - konfirmasi                  -->
-  <!-- ============================================================ -->
-  <div id="expense-delete-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="expense-delete-title">
-    <div class="modal-box max-w-sm">
-      <h3 id="expense-delete-title" class="font-display text-lg font-semibold mb-2">Hapus Transaksi?</h3>
-      <p class="text-sm text-inkmuted mb-5">Transaksi yang dihapus tidak dapat dikembalikan.</p>
-      <input type="hidden" id="expense-delete-id" />
-      <div class="flex gap-2 justify-end">
-        <button type="button" class="btn btn-ghost" data-close-modal="expense-delete-modal">Batal</button>
-        <button type="button" id="expense-delete-confirm-btn" class="btn btn-danger">Hapus</button>
+  <!-- Modal global (dipakai untuk ubah, hapus, dan pesan validasi) -->
+  <div id="modal-backdrop"
+    class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div role="dialog" aria-modal="true" aria-labelledby="modal-title"
+      class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 id="modal-title" class="text-sm font-bold text-slate-100">Judul Modal</h2>
+        <button type="button" id="btn-modal-close" class="text-slate-400 hover:text-slate-200 text-sm"
+          aria-label="Tutup dialog">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
       </div>
+      <div id="modal-body" class="text-xs text-slate-300 space-y-3"></div>
     </div>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- MODAL: UBAH BOOKMARK                                          -->
-  <!-- ============================================================ -->
-  <div id="bookmark-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bookmark-modal-title">
-    <div class="modal-box">
-      <h3 id="bookmark-modal-title" class="font-display text-lg font-semibold mb-4">Ubah Bookmark</h3>
-      <form id="bookmark-edit-form" novalidate>
-        <input type="hidden" id="bookmark-edit-id" />
-        <div class="space-y-3">
-          <div>
-            <label class="field-label" for="bookmark-edit-title">Nama / Judul</label>
-            <input id="bookmark-edit-title" type="text" class="input-base mt-1" />
-            <p class="error-text" id="bookmark-edit-title-error"></p>
-          </div>
-          <div>
-            <label class="field-label" for="bookmark-edit-url">URL</label>
-            <input id="bookmark-edit-url" type="text" class="input-base mt-1" />
-            <p class="error-text" id="bookmark-edit-url-error"></p>
-          </div>
-          <div>
-            <label class="field-label" for="bookmark-edit-category">Kategori / Tag</label>
-            <input id="bookmark-edit-category" type="text" class="input-base mt-1" />
-            <p class="error-text" id="bookmark-edit-category-error"></p>
-          </div>
-          <div>
-            <label class="field-label" for="bookmark-edit-note">Catatan (opsional)</label>
-            <input id="bookmark-edit-note" type="text" class="input-base mt-1" />
-          </div>
-        </div>
-        <div class="mt-5 flex gap-2 justify-end">
-          <button type="button" class="btn btn-ghost" data-close-modal="bookmark-modal">Batal</button>
-          <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============================================================ -->
-  <!-- MODAL: HAPUS BOOKMARK - konfirmasi                             -->
-  <!-- ============================================================ -->
-  <div id="bookmark-delete-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bookmark-delete-title">
-    <div class="modal-box max-w-sm">
-      <h3 id="bookmark-delete-title" class="font-display text-lg font-semibold mb-2">Hapus Bookmark?</h3>
-      <p class="text-sm text-inkmuted mb-5">Bookmark yang dihapus tidak dapat dikembalikan.</p>
-      <input type="hidden" id="bookmark-delete-id" />
-      <div class="flex gap-2 justify-end">
-        <button type="button" class="btn btn-ghost" data-close-modal="bookmark-delete-modal">Batal</button>
-        <button type="button" id="bookmark-delete-confirm-btn" class="btn btn-danger">Hapus</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="assets/script.js"></script>
+  <script src="assets/script.js" defer></script>
 </body>
+
 </html>
