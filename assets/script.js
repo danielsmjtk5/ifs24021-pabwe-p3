@@ -475,7 +475,28 @@ function initTabs(onTabChange) {
   const ACTIVE_CLASSES = ["text-indigo-400", "border-indigo-400"];
   const INACTIVE_CLASSES = ["text-slate-400", "border-transparent", "hover:text-slate-200"];
 
-  function activateTab(panelId) {
+  // Path publik: /index.html?tab=expense | ?tab=bookmark | ?tab=quiz
+  // Nama tab di URL = id panel tanpa awalan "panel-"
+  function getTabFromUrl() {
+    const key = new URLSearchParams(window.location.search).get("tab");
+    const panelId = key ? `panel-${key}` : null;
+    return panelIds.includes(panelId) ? panelId : null;
+  }
+
+  // mode: "push" (klik tab, bisa dikembalikan dengan tombol Back), "replace" (saat load), atau null (jangan ubah URL)
+  function updateUrl(panelId, mode) {
+    if (!mode) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", panelId.replace("panel-", ""));
+      if (mode === "push") history.pushState(null, "", url);
+      else history.replaceState(null, "", url);
+    } catch (err) {
+      console.error("Gagal memperbarui URL tab.", err); // misalnya saat dibuka lewat file://
+    }
+  }
+
+  function activateTab(panelId, historyMode = "push") {
     tabButtons.forEach((btn) => {
       const isActive = btn.dataset.tabTarget === panelId;
       btn.setAttribute("aria-selected", String(isActive));
@@ -487,27 +508,39 @@ function initTabs(onTabChange) {
       panel.classList.toggle("hidden", panel.id !== panelId);
     });
 
+    // Ingat tab terakhir
     try {
       localStorage.setItem(STORAGE_KEYS.activeTab, panelId);
     } catch (err) {
       console.error("Gagal menyimpan tab aktif.", err);
     }
 
+    updateUrl(panelId, historyMode);
     if (onTabChange) onTabChange(panelId);
   }
 
   tabButtons.forEach((btn) => {
-    btn.addEventListener("click", () => activateTab(btn.dataset.tabTarget));
+    btn.addEventListener("click", () => {
+      const panelId = btn.dataset.tabTarget;
+      // Jangan menumpuk riwayat jika tab yang sama diklik lagi
+      activateTab(panelId, getTabFromUrl() === panelId ? null : "push");
+    });
   });
 
-  // Pulihkan tab terakhir; jika tidak ada atau tidak valid, mulai dari tab pertama
+  // Tombol Back/Forward browser: ikuti ?tab= di URL tanpa menambah riwayat baru
+  window.addEventListener("popstate", () => {
+    activateTab(getTabFromUrl() || panelIds[0], null);
+  });
+
+  // Tab awal: prioritas 1) ?tab= di URL, 2) tab terakhir di localStorage, 3) tab pertama
   let savedTab = null;
   try {
     savedTab = localStorage.getItem(STORAGE_KEYS.activeTab);
   } catch (err) {
     console.error("Gagal membaca tab aktif.", err);
   }
-  activateTab(panelIds.includes(savedTab) ? savedTab : panelIds[0]);
+  const initialTab = getTabFromUrl() || (panelIds.includes(savedTab) ? savedTab : panelIds[0]);
+  activateTab(initialTab, "replace");
 }
 
 /* ==========================================================================
